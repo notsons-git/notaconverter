@@ -4,7 +4,7 @@ PNG / GIF → WebM converter for Telegram animated stickers.
 
 ## Download
 
-[Download NotAconverter v1.0.0](../../releases/tag/v1.0.0)
+[Download the latest release](../../releases/latest)
 
 Download the `.exe` and run it.
 
