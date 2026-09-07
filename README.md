@@ -134,5 +134,7 @@ Even a ⭐ on the repository is appreciated!
 ---
 
 <p align="center">
-  Made with ❤️ by <b>notsons</b>
+  <b>Not a converter. It's THE converter.</b>
+  <br>
+  <sub>Made with ❤️ by <b>notsons</b></sub>
 </p>
