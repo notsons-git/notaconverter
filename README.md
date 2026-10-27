@@ -1,140 +1,252 @@
-# 🎨 NotAconverter
+<div align="center">
 
-### PNG / GIF → WebM converter for Telegram animated stickers
+![NotAconverter Hero Banner](docs/images/hero_banner.png)
 
-<p align="center">
-  <img src="assets/preview.png" width="850">
-</p>
+# NotAconverter
 
-<p align="center">
-  <b>Turn your PNGs and GIFs into Telegram-ready animated stickers.</b>
-  <br>
-  Fast • Simple • Lightweight
-</p>
+**Десктопная инженерная студия для подготовки видеостикеров Telegram.**  
+*Любое видео, GIF или фото → ультрачёткий WebM (VP9) со 100% соблюдением спецификации.*
 
-<p align="center">
-  <a href="../../releases/latest">
-    <img src="https://img.shields.io/badge/⬇️%20Download%20Latest%20Release-5865F2?style=for-the-badge">
-  </a>
-  &nbsp;
-  <a href="../../releases">
-    <img src="https://img.shields.io/badge/📦%20All%20Releases-2F3136?style=for-the-badge">
-  </a>
-</p>
+[![Version](https://img.shields.io/badge/version-1.1.0-9EF41A?style=for-the-badge&logoColor=121411)](https://github.com/notsons-git/notaconverter/releases)
+[![Platform](https://img.shields.io/badge/platform-Windows%20x64-181B16?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/notsons-git/notaconverter/releases)
+[![FFmpeg](https://img.shields.io/badge/engine-FFmpeg%20VP9-2B3026?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
+[![License](https://img.shields.io/badge/license-MIT-1E211B?style=for-the-badge)](LICENSE)
 
+<br/>
 
+<a href="https://github.com/notsons-git/notaconverter/releases/latest">
+  <img src="https://img.shields.io/badge/⬇️%20Скачать%20NotAconverter%201.1.0%20(EXE)-9EF41A?style=for-the-badge&labelColor=181B16&color=9EF41A" alt="Download EXE">
+</a>
+&nbsp;
+<a href="https://github.com/notsons-git/notaconverter/releases">
+  <img src="https://img.shields.io/badge/📦%20Все%20релизы-181B16?style=for-the-badge&labelColor=121411&color=2B3026" alt="All Releases">
+</a>
 
-## ✨ Features
-
-🎞️ **GIF → WebM**
-Convert animated GIFs into WebM files for Telegram.
-
-🖼️ **PNG → WebM**
-Turn PNG images into WebM with transparency support.
-
-📐 **Telegram-ready output**
-Automatically prepares the output for Telegram's sticker format.
-
-⚡ **Automatic optimization**
-The converter handles quality and compression automatically.
-
-📦 **Batch conversion**
-Convert multiple files at once.
-
-🖱️ **Drag & Drop**
-Simply drag your files into the application.
-
-👀 **Animated GIF preview**
-Preview your animation before converting it.
-
-📁 **Custom export folder**
-Choose exactly where your converted files should be saved.
-
-💾 **Settings persistence**
-Your preferences are remembered between launches.
-
-## 🖥️ Preview
-
-### Main interface
-
-<p align="center">
-  <img src="assets/screenshot-main.png" width="800">
-</p>
-
-### 🎞️ GIF Preview
-
-<p align="center">
-  <img src="assets/screenshot-preview.gif" width="800">
-</p>
-
-### ⚙️ Settings
-
-<p align="center">
-  <img src="assets/screenshot-settings.png" width="800">
-</p>
-
-
-
-## 🚀 Download
-
-Go to the **[Latest Release](../../releases/latest)** and download the `.exe` file.
-
-<p align="center">
-  <a href="../../releases/latest">
-    <img src="https://img.shields.io/badge/⬇️%20Download%20NotAconverter-5865F2?style=for-the-badge&logo=github">
-  </a>
-</p>
-
-### Windows
-
-1. Download the `.exe`
-2. Run it
-3. Select or drag your files into NotAconverter
-4. Convert 🚀
-
-**No Python installation is required.**
-
-
-
-
-## 🛠️ Run from source
-
-Want to run the application directly from Python?
-
-You need **Python 3.14+**.
-
-Install the dependencies:
-
-```powershell
-pip install -r requirements.txt
-```
-
-Then run:
-
-```powershell
-python notaconverter.py
-```
-
-
-
-
-## ❤️ Support
-
-If you like NotAconverter and want to support its development, you can leave a donation:
-
-<p align="center">
-  <a href="https://donatex.gg/donate/notsons">
-    <img src="assets/donatex.png" width="500">
-  </a>
-</p>
-
-
-Even a ⭐ on the repository is appreciated!
+</div>
 
 ---
 
-<p align="center">
-  <b>Not a converter. It's THE converter.</b>
-  <br>
-  <sub>Made with ❤️ by <b>notsons</b></sub>
-</p>
+![Overview](docs/images/header_overview.png)
+
+## О программе
+
+Telegram предъявляет строгие детерминированные требования к загружаемым видеостикерам через официального бота `@Stickers`: контейнер **WebM**, кодек **VP9**, полное **отсутствие аудиодорожки**, жесткий лимит веса **до 256 КБ**, длительность **до 3.0 секунд** и обязательная фиксация одной из сторон ровно в **512 пикселей**.
+
+Большинство онлайн-конвертеров и любительских скриптов приводят к регулярным отказам бота:
+- Размытие интерполяции и потеря микроконтраста при сжатии.
+- Потеря альфа-канала (прозрачности) при перекодировании GIF и PNG.
+- Превышение порога 256 КБ из-за неконтролируемого битрейта.
+- Необходимость вручную обрезать видео в сторонних тяжелых NLE-редакторах.
+
+**NotAconverter** объединяет полный цикл производства стикеров в единый быстрый конвейер:
+- Принимает любые форматы: видео (**MP4**, **MOV**, **MKV**, **WebM**), анимации (**GIF**) и графику (**PNG**, **JPG**, **WebP**).
+- Предоставляет встроенный интерактивный видоискатель кадрирования с сеткой правила третей и фиксацией соотношения `1:1`.
+- Позволяет с миллисекундной точностью обрезать нужный фрагмент на таймлайне и подогнать длительность кнопкой `FIT [ 3.0s ]`.
+- Аппаратно сохраняет альфа-прозрачность (`yuva420p`) и использует адаптивный двухпроходный алгоритм VP9, гарантирующий попадание в лимит 256 КБ с первого раза.
+- Построен на базе дизайн-системы **«Tactical Obsidian»** — строгий утилитарный кибер-минимализм без визуального шума и лишних задержек.
+
+---
+
+![Interface](docs/images/header_interface.png)
+
+## Интерфейс и скриншоты
+
+<div align="center">
+
+### 1. Главный экран — управление очередью и пакетный экспорт
+*Сайдбар очереди файлов с бейджами форматов, инлайн-переименованием кликом, выбором папки сохранения и индикатором статуса.*
+![Главный экран](docs/images/screenshot_home.png)
+
+<br/>
+
+### 2. Интерактивный видоискатель кадрирования
+*Точное позиционирование области кадра с сеткой правила третей, перемещаемыми маркерами и пресетами пропорций (1:1, 4:3, 16:9, Free).*
+![Видоискатель кадрирования](docs/images/screenshot_crop.png)
+
+<br/>
+
+### 3. Интерактивный таймлайн и нарезка видео
+*Наглядная временная шкала, управление начальной и конечной точками, скраббинг без фризов через кадровый кеш и горячая клавиша Space для Play/Pause.*
+![Временная шкала](docs/images/screenshot_timeline.png)
+
+<br/>
+
+### 4. Окно настроек с защитой от случайного скролла
+*Тонкая регулировка качества CRF, битрейта, децимации FPS, потоков кодирования и звукового уведомления с умным вводом громкости.*
+![Окно настроек](docs/images/screenshot_settings.png)
+
+<br/>
+
+### 5. Завершённый пакетный экспорт
+*Индикация успешной конвертации всех задач очереди с автоматической нумерацией дубликатов и тактильным звуковым сигналом.*
+![Экспорт](docs/images/screenshot_export.png)
+
+</div>
+
+---
+
+![Features](docs/images/header_features.png)
+
+## Возможности
+
+- **Универсальный медиа-импорт**:
+  - Видеофайлы: `.mp4`, `.mov`, `.mkv`, `.webm`.
+  - Анимации: `.gif` (включая многокадровые с прозрачностью).
+  - Статические изображения: `.png`, `.jpg`, `.jpeg`, `.webp`.
+  - Добавление через кнопки диалогов или перетаскиванием **Drag & Drop** (файлы и папки целиком).
+- **Интерактивное визуальное кадрирование (`InteractiveCropWidget`)**:
+  - Быстрые пресеты пропорций: `1:1 Square (Telegram)`, `Free Crop`, `4:3`, `16:9` и сброс.
+  - Расчёт геометрических координат относительно оригинального разрешения исходника с округлением до четных пикселей.
+  - Затемнённая маска нерабочей зоны и координатная сетка правила третей.
+- **Интерактивный таймлайн и монтаж (`TimelineRangeSlider`)**:
+  - Управление точками входа и выхода с точностью до сотых долей секунды.
+  - Кнопка автоподгонки `FIT [ 3.0s ]` для мгновенного сжатия диапазона под норматив Telegram.
+  - Изолированное управление воспроизведением по клавише <kbd>Space</kbd> (пробел никогда не нажимает кнопки в фокусе).
+- **Мгновенный предпросмотр без задержек (`FrameCache`)**:
+  - Асинхронное фоновое демультиплексирование кадров в оперативную память (RAM).
+  - Плавный скраббинг и воспроизведение на стабильной частоте 30 FPS без повторных вызовов подпроцессов FFmpeg.
+- **Сохранение альфа-прозрачности**:
+  - Полное сохранение масок прозрачности из GIF и PNG с использованием цветового пространства `yuva420p` и VP9 Profile 0/1.
+- **Адаптивный контроль размера до 256 КБ**:
+  - Двухуровневый контроль: кодирование с коэффициентом постоянного качества CRF (18–42) и автоматический двухпроходный битрейт-кламп при риске превышения лимита.
+- **Инлайн-переименование и дедупликация**:
+  - Редактирование имени выходного стикера в списке файлов кликом по названию (без необходимости ввода расширения).
+  - Автоматическая нумерация `имя (1).webm`, `имя (2).webm` при повторном экспорте без потери оригинала.
+- **Процедурное звуковое сопровождение (`sound.py`)**:
+  - Встроенный синтезатор 16-bit PCM WAV (мягкий двухтональный аккорд D5+A5, 0.38 с) без внешних аудиофайлов.
+  - Звук играет строго один раз по окончании всей очереди.
+  - Поле громкости со свободной поддержкой форматов (`99`, `99%`, `.9`, `0.5`).
+- **Защита ползунков от колеса мыши (`NoWheelSlider`)**:
+  - Прокрутка мыши над слайдерами игнорируется, обеспечивая плавный скролл диалога настроек без случайного сброса параметров.
+
+---
+
+![Telegram Specs](docs/images/header_specs.png)
+
+## Требования Telegram к видеостикерам
+
+NotAconverter аппаратно калиброван под официальную спецификацию бота `@Stickers`:
+
+| Параметр | Требование Telegram API | Реализация в NotAconverter |
+| :--- | :--- | :--- |
+| **Формат контейнера** | Строго `WebM` | `.webm` с потоковыми метаданными |
+| **Видеокодек** | Строго `VP9` (`libvpx-vp9`) | Профиль 0 / Профиль 1 (с сохранением альфа-канала `yuva420p`) |
+| **Аудиодорожка** | Строго запрещена | Флаг `-an` (полное удаление аудиопотока) |
+| **Геометрия кадра** | Одна сторона строго 512 px, вторая $\le 512\text{ px}$ | Автоматический масштабировщик с чётными сторонами |
+| **Предел веса файла** | Строго $\le 256\text{ КБ}$ (262 144 байт) | Двухпроходный битрейт-кламп при риске переполнения |
+| **Длительность** | Строго $\le 3.00\text{ секунд}$ | Обрезка по таймлайну с миллисекундной точностью, кнопка `FIT [ 3.0s ]` |
+| **Частота кадров** | До 30 FPS | Настраиваемый дециматор частоты кадров (10 – 30 FPS) |
+| **Зацикливание** | Рекомендовано бесконечное | Автоматическая нормализация ключевых кадров (`gop-size`) |
+
+---
+
+![Installation](docs/images/header_installation.png)
+
+## Установка
+
+### Готовая сборка для Windows (EXE)
+
+Для запуска программы не требуется устанавливать Python или сторонние библиотеки:
+
+1. Откройте [**GitHub Releases**](https://github.com/notsons-git/notaconverter/releases/latest).
+2. Скачайте автономный файл **`NotAconverter-1.1.0.exe`**.
+3. Запустите программу и приступайте к конвертации.
+
+> *Примечание:* Для работы транскодирования в системе должен быть доступен `ffmpeg` (программа автоматически находит системный FFmpeg из переменной `PATH` либо из локального каталога приложения).
+
+---
+
+## Запуск из исходного кода
+
+Для запуска студии из исходников потребуется **Python 3.11+** и установленный **FFmpeg**:
+
+```bash
+# 1. Клонирование репозитория
+git clone https://github.com/notsons-git/notaconverter.git
+cd notaconverter
+
+# 2. Создание и активация виртуального окружения
+python -m venv venv
+venv\Scripts\activate
+
+# 3. Установка зависимостей
+pip install -r requirements.txt
+
+# 4. Запуск автоматических тестов соответствия Telegram
+python test_notaconverter.py
+
+# 5. Запуск приложения
+python main.py
+```
+
+---
+
+## Сборка Windows (.exe)
+
+Сборка автономного переносимого исполняемого файла выполняется через PyInstaller с оптимизацией веса (исключение неиспользуемых языковых пакетов и тяжелых модулей Qt6):
+
+```bash
+python build_optimized_exe.py
+```
+
+Готовый файл размером ~30 МБ будет создан в каталоге `dist/NotAconverter-1.1.0.exe`.
+
+---
+
+![Architecture](docs/images/header_architecture.png)
+
+## Архитектура конвейера обработки
+
+Процесс транскодирования полностью изолирован от UI-потока через пул параллельных воркеров `QThreadPool` и неблокирующие подпроцессы `QProcess`.
+
+```mermaid
+flowchart TD
+    A["Входной медиафайл (MP4 / MOV / GIF / PNG / WebP)"] --> B["Инспекция метаданных (FFprobe / Pillow)"]
+    B --> C["Фоновый кадровый кеш (FrameCache / RAM)"]
+    C --> D["Интерактивный видоискатель (InteractiveCropWidget + Timeline)"]
+    D --> E["Нормализация геометрии (512px Max-Side, Чётные грани)"]
+    E --> F["Кодирование FFmpeg (VP9, YUVA420P, No-Audio)"]
+    F --> G{"Контроль размера (Файл <= 256 КБ?)"}
+    G -- "Да" --> H["Валидация спецификации Telegram API"]
+    G -- "Нет (Превышение)" --> I["2-Pass адаптивный битрейт-кламп"]
+    I --> F
+    H --> J["Готовый .webm видеостикер"]
+```
+
+### Структура модулей проекта
+
+```
+notaconverter/
+├── config.py             # Хранилище настроек и спецификаций Telegram
+├── converter.py          # Ядро кодирования FFmpeg, расчет геометрии и битрейта
+├── frame_cache.py        # Фоновый кадровый кеш для моментального предпросмотра
+├── media_probe.py        # Анализатор медиаданных (разрешение, FPS, альфа-канал)
+├── settings_dialog.py    # Окно настроек с защитой NoWheelSlider
+├── sound.py              # Процедурный синтезатор 16-bit PCM WAV звука
+├── task_queue.py         # Менеджер параллельной очереди задач
+├── ui.py                 # Главное окно студии в стиле Tactical Obsidian
+└── widgets/
+    ├── crop_overlay.py   # Интерактивный видоискатель кадрирования
+    ├── file_list_widget.py # Карточки очереди файлов с инлайн-переименованием
+    └── timeline_slider.py# Временная шкала с нарезкой и подгонкой FIT [ 3.0s ]
+```
+
+---
+
+## Конфиденциальность
+
+- **100% локальная обработка**: Все видео-, аудио- и графические данные обрабатываются исключительно локально на вашем компьютере. Приложение **не отправляет файлы в интернет и не использует облачные сервисы**.
+- **Отсутствие телеметрии**: В коде полностью отсутствуют трекеры, аналитика и сбор пользовательских данных.
+- **Прозрачное хранение настроек**: Конфигурация сохраняется синхронно в текстовый локальный файл `config.json` в каталоге приложения.
+
+---
+
+## Лицензия
+
+Проект распространяется под свободной лицензией **[MIT License](LICENSE)**. Вы можете свободно использовать, модифицировать и распространять программное обеспечение при условии сохранения уведомления об авторских правах.
+
+---
+
+<div align="center">
+<sub>NOTACONVERTER ENGINEERING TEAM // ALL RIGHTS RESERVED // TELEGRAM COMPLIANT</sub>
+</div>

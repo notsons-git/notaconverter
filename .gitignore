@@ -1,15 +1,34 @@
+# Python
 __pycache__/
-*.pyc
-
-.venv/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
 venv/
+.venv/
+ENV/
 
+# Build artifacts
 build/
 dist/
-*.spec
+*.spec.bak
+*.egg-info/
 
+# Local configuration and tests
+config.json
+test_fixtures/
+demo_fixtures/
+dist_test_export/
+dist_export_demo/
+*.webm
+*.mp4
+*.gif
+*.png.bak
+err.txt
+
+# OS and Editors
+.DS_Store
+Thumbs.db
 .vscode/
 .idea/
-
-*.log
-*.tmp

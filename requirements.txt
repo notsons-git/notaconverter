@@ -1,2 +1,3 @@
-Pillow
-tkinterdnd2
+PyQt6>=6.6.0
+Pillow>=10.0.0
+pyinstaller>=6.0.0
