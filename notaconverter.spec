@@ -60,7 +60,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='NotAconverter-1.1.0',
+    name='NotAconverter-1.1.1',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

@@ -24,7 +24,7 @@ from .frame_cache import FrameCache, pil_to_qpixmap
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("NotAconverter 1.1.0 — Telegram Sticker Studio")
+        self.setWindowTitle("NotAconverter 1.1.1 — Telegram Sticker Studio")
         self.resize(1140, 780)
         self.setMinimumSize(880, 560)
 
@@ -516,15 +516,25 @@ class MainWindow(QMainWindow):
 
     def _add_file_paths(self, paths: List[str]):
         added = 0
+        failed = []
         for p in paths:
             if is_supported_file(p):
                 item = self.queue_mgr.add_file(p)
                 if item:
                     added += 1
+                else:
+                    failed.append(Path(p).name)
+            else:
+                failed.append(Path(p).name)
         if added > 0:
             self.lbl_queue_count.setText(str(len(self.queue_mgr.items)))
             self._update_export_destination_label()
             self._update_ui_state()
+        if failed:
+            self.lbl_global_status.setText(
+                f"⚠ Skipped {len(failed)} unsupported or unreadable file(s): {', '.join(failed[:2])}"
+                + (f" +{len(failed) - 2} more" if len(failed) > 2 else "")
+            )
 
     def _clear_queue(self):
         self._stop_playback()

@@ -281,7 +281,7 @@ class FileQueueList(QListWidget):
         self.itemSelectionChanged.connect(self._on_selection_changed)
 
     def add_queue_item(self, item: QueueItem):
-        list_item = QListWidgetItem(self)
+        list_item = QListWidgetItem()
         list_item.setData(Qt.ItemDataRole.UserRole, item.id)
         card = FileCardWidget(item)
         card.remove_requested.connect(self.item_removed.emit)

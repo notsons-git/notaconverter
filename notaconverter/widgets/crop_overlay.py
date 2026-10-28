@@ -1,7 +1,7 @@
 import math
 from typing import Optional, Tuple
 from PyQt6.QtCore import Qt, QRectF, QPointF, pyqtSignal
-from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QImage, QPixmap, QCursor
+from PyQt6.QtGui import QPainter, QColor, QPen, QBrush, QImage, QPixmap, QCursor, QFont
 from PyQt6.QtWidgets import QWidget
 
 from ..converter import CropRect

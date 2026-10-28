@@ -93,7 +93,12 @@ class QueueManager(QObject):
         if not info:
             return None
 
-        task_id = f"{len(self.items) + 1}_{Path(path).stem}"
+        base_id = f"{len(self.items) + 1}_{Path(path).stem}"
+        task_id = base_id
+        counter = 1
+        while task_id in self.items:
+            task_id = f"{base_id}_{counter}"
+            counter += 1
         settings = ItemSettings()
         # Auto-trim end to 3.0s if longer than 3.0s
         if info.duration > 3.0:

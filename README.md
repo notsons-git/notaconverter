@@ -7,7 +7,7 @@
 **Десктопная инженерная студия для подготовки видеостикеров Telegram.**  
 *Любое видео, GIF или фото → ультрачёткий WebM (VP9) со 100% соблюдением спецификации.*
 
-[![Version](https://img.shields.io/badge/version-1.1.0-9EF41A?style=for-the-badge&logoColor=121411)](https://github.com/notsons-git/notaconverter/releases)
+[![Version](https://img.shields.io/badge/version-1.1.1-9EF41A?style=for-the-badge&logoColor=121411)](https://github.com/notsons-git/notaconverter/releases)
 [![Platform](https://img.shields.io/badge/platform-Windows%20x64-181B16?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/notsons-git/notaconverter/releases)
 [![FFmpeg](https://img.shields.io/badge/engine-FFmpeg%20VP9-2B3026?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
 [![License](https://img.shields.io/badge/license-MIT-1E211B?style=for-the-badge)](LICENSE)
@@ -15,7 +15,7 @@
 <br/>
 
 <a href="https://github.com/notsons-git/notaconverter/releases/latest">
-  <img src="https://img.shields.io/badge/⬇️%20Скачать%20NotAconverter%201.1.0%20(EXE)-9EF41A?style=for-the-badge&labelColor=181B16&color=9EF41A" alt="Download EXE">
+  <img src="https://img.shields.io/badge/⬇️%20Скачать%20NotAconverter%201.1.1%20(EXE)-9EF41A?style=for-the-badge&labelColor=181B16&color=9EF41A" alt="Download EXE">
 </a>
 &nbsp;
 <a href="https://github.com/notsons-git/notaconverter/releases">
@@ -154,7 +154,7 @@ NotAconverter аппаратно калиброван под официальн�
 Для запуска программы не требуется устанавливать Python или сторонние библиотеки:
 
 1. Откройте [**GitHub Releases**](https://github.com/notsons-git/notaconverter/releases/latest).
-2. Скачайте автономный файл **`NotAconverter-1.1.0.exe`**.
+2. Скачайте автономный файл **`NotAconverter-1.1.1.exe`**.
 3. Запустите программу и приступайте к конвертации.
 
 > *Примечание:* Для работы транскодирования в системе должен быть доступен `ffmpeg` (программа автоматически находит системный FFmpeg из переменной `PATH` либо из локального каталога приложения).
@@ -194,7 +194,7 @@ python main.py
 python build_optimized_exe.py
 ```
 
-Готовый файл размером ~30 МБ будет создан в каталоге `dist/NotAconverter-1.1.0.exe`.
+Готовый файл размером ~30 МБ будет создан в каталоге `dist/NotAconverter-1.1.1.exe`.
 
 ---
 

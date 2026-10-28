@@ -6,18 +6,23 @@ from pathlib import Path
 from typing import Optional, List, Tuple, Dict
 from PIL import Image, ImageSequence
 
-from PyQt6.QtCore import QObject, pyqtSignal, QTimer
+from PyQt6.QtCore import QObject, pyqtSignal
 from PyQt6.QtGui import QPixmap, QImage
 
 
-def pil_to_qpixmap(pil_img: Image.Image) -> QPixmap:
-    """Convert PIL RGBA image to QPixmap without subprocess overhead."""
+def pil_to_qimage(pil_img: Image.Image) -> QImage:
+    """Convert PIL RGBA image to QImage safely without shared buffer issues."""
     if pil_img.mode != "RGBA":
         pil_img = pil_img.convert("RGBA")
     data = pil_img.tobytes("raw", "RGBA")
     qimg = QImage(data, pil_img.width, pil_img.height, 4 * pil_img.width,
                   QImage.Format.Format_RGBA8888)
-    return QPixmap.fromImage(qimg)
+    return qimg.copy()
+
+
+def pil_to_qpixmap(pil_img: Image.Image) -> QPixmap:
+    """Convert PIL RGBA image to QPixmap (call on GUI thread)."""
+    return QPixmap.fromImage(pil_to_qimage(pil_img))
 
 
 class FrameCache(QObject):
@@ -33,6 +38,7 @@ class FrameCache(QObject):
 
     frames_ready = pyqtSignal()          # emitted when background extraction finishes
     frame_extracted = pyqtSignal(float)   # emitted per-frame during extraction (progress)
+    _worker_finished = pyqtSignal(list, list)  # internal signal to marshal frames to GUI thread
 
     # Max frames to cache per file
     MAX_VIDEO_CACHE_FRAMES = 90  # 3s × 30fps
@@ -49,6 +55,7 @@ class FrameCache(QObject):
         self._cancel = threading.Event()
         self._lock = threading.Lock()
         self._thread: Optional[threading.Thread] = None
+        self._worker_finished.connect(self._on_worker_finished)
 
     @property
     def is_loading(self) -> bool:
@@ -271,7 +278,7 @@ class FrameCache(QObject):
 
             frame_bytes = out_w * out_h * 4  # RGBA
             frame_index = 0
-            frames = []
+            qimages = []
             pil_frames = []
 
             while not self._cancel.is_set():
@@ -290,8 +297,8 @@ class FrameCache(QObject):
                 try:
                     pil_img = Image.frombytes("RGBA", (out_w, out_h), raw)
                     pil_frames.append((timestamp, pil_img.copy()))
-                    pix = pil_to_qpixmap(pil_img)
-                    frames.append((timestamp, pix))
+                    qimg = pil_to_qimage(pil_img)
+                    qimages.append((timestamp, qimg))
                 except Exception:
                     pass
 
@@ -300,41 +307,30 @@ class FrameCache(QObject):
             proc.stdout.close()
             proc.wait(timeout=3)
 
-            with self._lock:
-                self._frames = frames
-                self._pil_frames = pil_frames
-
         except Exception:
             pass
         finally:
+            if not self._cancel.is_set():
+                self._worker_finished.emit(qimages, pil_frames)
+            else:
+                self._loading = False
+
+    def _on_worker_finished(self, qimages: List[Tuple[float, QImage]], pil_frames: List[Tuple[float, Image.Image]]):
+        """Called on GUI thread via Qt signal when video extraction finishes."""
+        if self._cancel.is_set():
             self._loading = False
-            # Emit signal from the main thread via QTimer
-            QTimer.singleShot(0, self.frames_ready.emit)
+            return
+        pix_frames = []
+        for t, qimg in qimages:
+            pix_frames.append((t, QPixmap.fromImage(qimg)))
+        with self._lock:
+            self._frames = pix_frames
+            self._pil_frames = pil_frames
+        self._loading = False
+        self.frames_ready.emit()
 
     def _probe_scaled_size(self, path: str, vf: str) -> Tuple[int, int]:
-        """Run a 1-frame encode to determine the output dimensions after vf scaling."""
-        cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-i", path,
-            "-vf", vf,
-            "-vframes", "1",
-            "-f", "rawvideo",
-            "-pix_fmt", "rgba",
-            "-"
-        ]
-        try:
-            r = subprocess.run(
-                cmd, capture_output=True, timeout=5,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0)
-            )
-            # Determine size from the output data length.
-            # We need another approach: use ffprobe on the scaled output.
-            # Instead, use ffprobe with lavfi.
-            pass
-        except Exception:
-            pass
-
-        # More reliable: use ffprobe to get the input dims, then compute scaled.
+        """Determine scaled preview dimensions using ffprobe."""
         cmd2 = [
             "ffprobe", "-v", "error",
             "-select_streams", "v:0",

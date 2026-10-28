@@ -77,6 +77,8 @@ class MediaProbe:
 
         ext = p.suffix.lower()
         size_bytes = os.path.getsize(path)
+        if size_bytes == 0:
+            return None
         is_video_ext = ext in SUPPORTED_VIDEO_EXTS
 
         # Check with Pillow first for image/gif
@@ -84,6 +86,8 @@ class MediaProbe:
             try:
                 with Image.open(path) as im:
                     width, height = im.size
+                    if width <= 0 or height <= 0:
+                        return None
                     is_animated = bool(getattr(im, "is_animated", False) and getattr(im, "n_frames", 1) > 1)
                     has_alpha = im.mode in ("RGBA", "LA", "PA") or "transparency" in im.info
                     
@@ -153,8 +157,10 @@ class MediaProbe:
             if not streams:
                 return None
             v = streams[0]
-            w = int(v.get("width", 512))
-            h = int(v.get("height", 512))
+            w = int(v.get("width", 0))
+            h = int(v.get("height", 0))
+            if w <= 0 or h <= 0:
+                return None
             pix_fmt = str(v.get("pix_fmt", "")).lower()
             codec = str(v.get("codec_name", "")).upper()
 
