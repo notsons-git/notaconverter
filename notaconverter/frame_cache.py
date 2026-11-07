@@ -37,6 +37,7 @@ class FrameCache(QObject):
     """
 
     frames_ready = pyqtSignal()          # emitted when background extraction finishes
+    first_frame_ready = pyqtSignal(QImage, float)  # emitted immediately when frame 0 is decoded
     frame_extracted = pyqtSignal(float)   # emitted per-frame during extraction (progress)
     _worker_finished = pyqtSignal(list, list)  # internal signal to marshal frames to GUI thread
 
@@ -299,6 +300,8 @@ class FrameCache(QObject):
                     pil_frames.append((timestamp, pil_img.copy()))
                     qimg = pil_to_qimage(pil_img)
                     qimages.append((timestamp, qimg))
+                    if frame_index == 0 and not self._cancel.is_set():
+                        self.first_frame_ready.emit(qimg, timestamp)
                 except Exception:
                     pass
 

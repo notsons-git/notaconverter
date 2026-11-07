@@ -1,5 +1,6 @@
 from pathlib import Path
 from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QCheckBox, QRadioButton, QButtonGroup, QLineEdit, QFileDialog,
@@ -7,6 +8,8 @@ from PyQt6.QtWidgets import (
 )
 
 from .config import AppConfig
+from .widgets.tactical_input import TacticalNumberEdit
+from .widgets.tactical_icons import get_tactical_icon
 
 ASSETS_DIR = Path(__file__).parent / "assets"
 CHECK_ICON = str(ASSETS_DIR / "check.svg").replace("\\", "/")
@@ -24,8 +27,12 @@ class SettingsDialog(QDialog):
         super().__init__(parent)
         self.config = config
         self.setWindowTitle("CONFIGURATION // NOTACONVERTER")
-        self.resize(560, 660)
+        self.resize(560, 680)
         self.setMinimumSize(480, 440)
+
+        ico_path = ASSETS_DIR / "app.ico"
+        if ico_path.exists():
+            self.setWindowIcon(QIcon(str(ico_path)))
 
         style = """
             QDialog {
@@ -172,10 +179,19 @@ class SettingsDialog(QDialog):
         main_layout.setContentsMargins(18, 16, 18, 16)
         main_layout.setSpacing(12)
 
-        # Tactical Header
+        # Tactical Header with Logo №09
         top_box = QHBoxLayout()
+        top_box.setSpacing(10)
+
+        logo_lbl = QLabel()
+        logo_lbl.setFixedSize(28, 28)
+        logo_pix = QPixmap(str(ASSETS_DIR / "logo.png"))
+        if not logo_pix.isNull():
+            logo_lbl.setPixmap(logo_pix.scaled(28, 28, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        top_box.addWidget(logo_lbl)
+
         title_lbl = QLabel("SYSTEM CONFIGURATION")
-        title_lbl.setStyleSheet("font-size: 11pt; font-weight: 800; color: #E8EBE4; letter-spacing: 1px;")
+        title_lbl.setStyleSheet("font-size: 11pt; font-weight: 800; color: #E8EBE4; letter-spacing: 0.5px;")
         tag_lbl = QLabel("[ ENGINE // VP9-WEBM ]")
         tag_lbl.setStyleSheet("font-size: 8pt; font-family: monospace; color: #9EF41A;")
         top_box.addWidget(title_lbl)
@@ -248,6 +264,7 @@ class SettingsDialog(QDialog):
         row_path.addWidget(self.txt_folder, 1)
 
         btn_browse = QPushButton("BROWSE")
+        btn_browse.setIcon(get_tactical_icon("folder-open", size=13))
         btn_browse.clicked.connect(self._browse_folder)
         row_path.addWidget(btn_browse)
         v_folder.addLayout(row_path)
@@ -259,35 +276,53 @@ class SettingsDialog(QDialog):
         v_quality = QVBoxLayout(grp_quality)
         v_quality.setSpacing(8)
 
-        # Max Side (NoWheelSlider)
-        self.lbl_side = QLabel(f"Dimension Ceiling: {self.config.max_side} px [Exact Telegram match: 512 px]")
+        # Max Side (Slider + TacticalNumberEdit)
+        lbl_side = QLabel("Dimension Ceiling:")
+        row_side = QHBoxLayout()
         self.slider_side = NoWheelSlider(Qt.Orientation.Horizontal)
         self.slider_side.setRange(128, 512)
         self.slider_side.setSingleStep(32)
         self.slider_side.setValue(self.config.max_side)
-        self.slider_side.valueChanged.connect(lambda v: self.lbl_side.setText(f"Dimension Ceiling: {v} px"))
-        v_quality.addWidget(self.lbl_side)
-        v_quality.addWidget(self.slider_side)
+        self.num_side = TacticalNumberEdit(value=self.config.max_side, min_value=128, max_value=512, step=32, unit="px", even_only=True)
+        self.num_side.setFixedWidth(80)
+        self.slider_side.valueChanged.connect(lambda v: self.num_side.setValue(v))
+        self.num_side.valueChanged.connect(lambda v: self.slider_side.setValue(int(v)))
+        row_side.addWidget(self.slider_side, 1)
+        row_side.addWidget(self.num_side)
+        v_quality.addWidget(lbl_side)
+        v_quality.addLayout(row_side)
         v_quality.addSpacing(6)
 
-        # File Size Limit (NoWheelSlider)
-        self.lbl_size = QLabel(f"Payload Weight Limit: {self.config.max_size_kb} KB [Telegram maximum: 256 KB]")
+        # File Size Limit (Payload Weight Limit) (Slider + TacticalNumberEdit)
+        lbl_size = QLabel("Payload Weight Limit:")
+        row_size = QHBoxLayout()
         self.slider_size = NoWheelSlider(Qt.Orientation.Horizontal)
         self.slider_size.setRange(64, 256)
         self.slider_size.setValue(self.config.max_size_kb)
-        self.slider_size.valueChanged.connect(lambda v: self.lbl_size.setText(f"Payload Weight Limit: {v} KB"))
-        v_quality.addWidget(self.lbl_size)
-        v_quality.addWidget(self.slider_size)
+        self.num_size = TacticalNumberEdit(value=self.config.max_size_kb, min_value=64, max_value=256, step=1, unit="KB")
+        self.num_size.setFixedWidth(80)
+        self.slider_size.valueChanged.connect(lambda v: self.num_size.setValue(v))
+        self.num_size.valueChanged.connect(lambda v: self.slider_size.setValue(int(v)))
+        row_size.addWidget(self.slider_size, 1)
+        row_size.addWidget(self.num_size)
+        v_quality.addWidget(lbl_size)
+        v_quality.addLayout(row_size)
         v_quality.addSpacing(6)
 
-        # FPS (NoWheelSlider)
-        self.lbl_fps = QLabel(f"Temporal Rate: {self.config.fps} FPS [Telegram standard: 30 FPS]")
+        # FPS (Slider + TacticalNumberEdit)
+        lbl_fps = QLabel("Temporal Rate:")
+        row_fps = QHBoxLayout()
         self.slider_fps = NoWheelSlider(Qt.Orientation.Horizontal)
         self.slider_fps.setRange(15, 60)
         self.slider_fps.setValue(self.config.fps)
-        self.slider_fps.valueChanged.connect(lambda v: self.lbl_fps.setText(f"Temporal Rate: {v} FPS"))
-        v_quality.addWidget(self.lbl_fps)
-        v_quality.addWidget(self.slider_fps)
+        self.num_fps = TacticalNumberEdit(value=self.config.fps, min_value=15, max_value=60, step=1, unit="FPS")
+        self.num_fps.setFixedWidth(80)
+        self.slider_fps.valueChanged.connect(lambda v: self.num_fps.setValue(v))
+        self.num_fps.valueChanged.connect(lambda v: self.slider_fps.setValue(int(v)))
+        row_fps.addWidget(self.slider_fps, 1)
+        row_fps.addWidget(self.num_fps)
+        v_quality.addWidget(lbl_fps)
+        v_quality.addLayout(row_fps)
         v_quality.addSpacing(8)
 
         # Micro-Sharpness Boost
@@ -297,14 +332,20 @@ class SettingsDialog(QDialog):
         v_quality.addWidget(self.chk_unsharp)
         v_quality.addSpacing(8)
 
-        # Multitasking Concurrency (NoWheelSlider)
-        self.lbl_conc = QLabel(f"Parallel Worker Threads: {self.config.concurrency} concurrent tasks")
+        # Multitasking Concurrency (Slider + TacticalNumberEdit)
+        lbl_conc = QLabel("Parallel Worker Threads:")
+        row_conc = QHBoxLayout()
         self.slider_conc = NoWheelSlider(Qt.Orientation.Horizontal)
         self.slider_conc.setRange(1, 4)
         self.slider_conc.setValue(self.config.concurrency)
-        self.slider_conc.valueChanged.connect(lambda v: self.lbl_conc.setText(f"Parallel Worker Threads: {v} concurrent tasks"))
-        v_quality.addWidget(self.lbl_conc)
-        v_quality.addWidget(self.slider_conc)
+        self.num_conc = TacticalNumberEdit(value=self.config.concurrency, min_value=1, max_value=4, step=1)
+        self.num_conc.setFixedWidth(80)
+        self.slider_conc.valueChanged.connect(lambda v: self.num_conc.setValue(v))
+        self.num_conc.valueChanged.connect(lambda v: self.slider_conc.setValue(int(v)))
+        row_conc.addWidget(self.slider_conc, 1)
+        row_conc.addWidget(self.num_conc)
+        v_quality.addWidget(lbl_conc)
+        v_quality.addLayout(row_conc)
 
         v_content.addWidget(grp_quality)
 
@@ -327,10 +368,15 @@ class SettingsDialog(QDialog):
         lbl_v.setStyleSheet("color: #92968C; font-family: monospace;")
         vol_box.addWidget(lbl_v)
 
-        self.txt_volume = QLineEdit(getattr(self.config, "sound_volume_str", "80%"))
-        self.txt_volume.setFixedWidth(64)
-        self.txt_volume.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.txt_volume.setToolTip("Volume input format: e.g. 99, 99%, .9 (=90%), 0.5, 100%")
+        init_vol = 80
+        vol_str = getattr(self.config, "sound_volume_str", "80%").replace("%", "").strip()
+        try:
+            init_vol = int(float(vol_str))
+        except ValueError:
+            init_vol = 80
+
+        self.txt_volume = TacticalNumberEdit(value=init_vol, min_value=0, max_value=100, step=5, unit="%")
+        self.txt_volume.setFixedWidth(70)
         vol_box.addWidget(self.txt_volume)
         sound_row.addLayout(vol_box)
 
@@ -360,10 +406,12 @@ class SettingsDialog(QDialog):
         # Action Buttons
         btn_row = QHBoxLayout()
         btn_cancel = QPushButton("CANCEL")
+        btn_cancel.setIcon(get_tactical_icon("x", size=13))
         btn_cancel.clicked.connect(self.reject)
         btn_row.addWidget(btn_cancel)
 
         btn_save = QPushButton("APPLY CONFIGURATION")
+        btn_save.setIcon(get_tactical_icon("check", normal_color="#121411", active_color="#121411", size=13))
         btn_save.setObjectName("PrimaryBtn")
         btn_save.clicked.connect(self._save_and_close)
         btn_row.addWidget(btn_save)
@@ -379,13 +427,13 @@ class SettingsDialog(QDialog):
     def _save_and_close(self):
         self.config.output_mode = "custom" if self.rb_custom.isChecked() else "first_file"
         self.config.custom_folder = self.txt_folder.text().strip()
-        self.config.max_side = self.slider_side.value()
-        self.config.max_size_kb = self.slider_size.value()
-        self.config.fps = self.slider_fps.value()
+        self.config.max_side = self.num_side.int_value()
+        self.config.max_size_kb = self.num_size.int_value()
+        self.config.fps = self.num_fps.int_value()
         self.config.enable_unsharp = self.chk_unsharp.isChecked()
-        self.config.concurrency = self.slider_conc.value()
+        self.config.concurrency = self.num_conc.int_value()
         self.config.play_sound = self.chk_sound.isChecked()
-        self.config.sound_volume_str = self.txt_volume.text().strip() or "80%"
+        self.config.sound_volume_str = f"{self.txt_volume.int_value()}%"
         self.config.overwrite = self.chk_overwrite.isChecked()
         self.config.open_after = self.chk_open.isChecked()
         self.config.save()

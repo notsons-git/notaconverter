@@ -20,7 +20,7 @@ class AppConfig:
     max_side: int = 512
     max_duration: float = 3.0
     fps: int = 30
-    max_size_kb: int = 252
+    max_size_kb: int = 220  # Default 220 KB per Telegram optimization guidelines
     quality_preset: str = "ultra"  # "ultra" (maximum sharpness/Lanczos+unsharp), "balanced", "fast"
     enable_unsharp: bool = True
     concurrency: int = 2  # simultaneous encodes
@@ -38,6 +38,8 @@ class AppConfig:
             try:
                 data = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
                 valid_fields = {k: v for k, v in data.items() if k in cls.__dataclass_fields__}
+                if "max_size_kb" not in data:
+                    valid_fields["max_size_kb"] = 220
                 return cls(**valid_fields)
             except Exception:
                 pass

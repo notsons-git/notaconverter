@@ -1,13 +1,14 @@
 from pathlib import Path
 from typing import Optional, Dict
-from PyQt6.QtCore import Qt, pyqtSignal
-from PyQt6.QtGui import QColor, QFont
+from PyQt6.QtCore import Qt, pyqtSignal, QRectF
+from PyQt6.QtGui import QColor, QFont, QPainter, QPen
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QListWidget,
     QListWidgetItem, QProgressBar, QPushButton, QFrame, QLineEdit
 )
 
 from ..task_queue import QueueItem, TaskStatus
+from .tactical_icons import get_tactical_icon, get_pixmap
 
 
 class EditableNameField(QLineEdit):
@@ -20,12 +21,12 @@ class EditableNameField(QLineEdit):
 
 FORMAT_BADGE_STYLE = """
     QLabel {
-        background-color: #1E221B;
-        color: #9EF41A;
+        background-color: #141C0F;
+        color: #A6FF00;
         font-family: "Consolas", "Courier New", monospace;
         font-weight: 700;
         font-size: 7.5pt;
-        border: 1px solid #2B3026;
+        border: 1px solid #284414;
         border-radius: 3px;
         padding: 2px 5px;
     }
@@ -42,13 +43,13 @@ class FileCardWidget(QFrame):
         self.setObjectName("FileCard")
         self.setStyleSheet("""
             QFrame#FileCard {
-                background-color: #181B16;
-                border: 1px solid #2B3026;
+                background-color: #161A13;
+                border: 1px solid #273321;
                 border-radius: 4px;
             }
             QFrame#FileCard:hover {
-                border: 1px solid #363E30;
-                background-color: #20241E;
+                border: 1px solid #3C4E33;
+                background-color: #1D2419;
             }
         """)
 
@@ -95,21 +96,19 @@ class FileCardWidget(QFrame):
         top_row.addWidget(self.name_edit, 1)
 
         # Remove button
-        self.btn_remove = QPushButton("×")
+        self.btn_remove = QPushButton()
+        self.btn_remove.setIcon(get_tactical_icon("x", normal_color="#92968C", active_color="#FF4D4D", size=12))
         self.btn_remove.setFixedSize(20, 20)
+        self.btn_remove.setToolTip("Remove from queue")
         self.btn_remove.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_remove.setStyleSheet("""
             QPushButton {
                 background: transparent;
-                color: #92968C;
                 border: none;
-                font-weight: bold;
-                font-size: 11pt;
+                border-radius: 3px;
             }
             QPushButton:hover {
-                color: #FF4D4D;
                 background-color: #2A1F1F;
-                border-radius: 3px;
             }
         """)
         self.btn_remove.clicked.connect(lambda: self.remove_requested.emit(self.item.id))
@@ -174,21 +173,21 @@ class FileCardWidget(QFrame):
         if selected:
             self.setStyleSheet("""
                 QFrame#FileCard {
-                    background-color: #1E251A;
-                    border: 1px solid #9EF41A;
+                    background-color: #1E2718;
+                    border: 1px solid #A6FF00;
                     border-radius: 4px;
                 }
             """)
         else:
             self.setStyleSheet("""
                 QFrame#FileCard {
-                    background-color: #181B16;
-                    border: 1px solid #2B3026;
+                    background-color: #161A13;
+                    border: 1px solid #273321;
                     border-radius: 4px;
                 }
                 QFrame#FileCard:hover {
-                    border: 1px solid #363E30;
-                    background-color: #20241E;
+                    border: 1px solid #3C4E33;
+                    background-color: #1D2419;
                 }
             """)
 
@@ -219,6 +218,7 @@ class FileQueueList(QListWidget):
     item_selected = pyqtSignal(str) # task_id
     item_removed = pyqtSignal(str)  # task_id
     files_dropped = pyqtSignal(list) # list of paths
+    empty_clicked = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -227,58 +227,69 @@ class FileQueueList(QListWidget):
         self.setVerticalScrollMode(QListWidget.ScrollMode.ScrollPerPixel)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
         self.setSpacing(4)
-        self.setStyleSheet("""
-            QListWidget {
-                background-color: #141712;
-                border: 1px solid #23271E;
-                border-radius: 4px;
-                padding: 4px;
-                outline: none;
-            }
-            QListWidget::item {
-                background: transparent;
-                border: none;
-                padding: 0px;
-            }
-            QListWidget::item:selected {
-                background: transparent;
-                border: none;
-            }
-            QScrollBar:vertical {
-                border: none;
-                background-color: #121411;
-                width: 6px;
-                margin: 0px;
-                border-radius: 3px;
-            }
-            QScrollBar::handle:vertical {
-                background-color: #262B21;
-                min-height: 25px;
-                border-radius: 3px;
-            }
-            QScrollBar::handle:vertical:hover {
-                background-color: #363D2E;
-            }
-            QScrollBar::handle:vertical:pressed {
-                background-color: #9EF41A;
-            }
-            QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
-                height: 0px;
-                background: none;
-            }
-            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {
-                background: none;
-            }
-            QScrollBar:horizontal {
-                height: 0px;
-                width: 0px;
-            }
-        """)
+        self._is_drag_active = False
+        self._update_border_style()
 
         self.cards: Dict[str, FileCardWidget] = {}
         self.item_by_task_id: Dict[str, QListWidgetItem] = {}
 
         self.itemSelectionChanged.connect(self._on_selection_changed)
+
+    def _update_border_style(self):
+        if self.count() == 0:
+            border = "1.5px dashed #A6FF00" if self._is_drag_active else "1.5px dashed #2B3824"
+            bg = "#11170C" if self._is_drag_active else "#0E120D"
+        else:
+            border = "1px solid #1F271A"
+            bg = "#0E120D"
+
+        self.setStyleSheet(f"""
+            QListWidget {{
+                background-color: {bg};
+                border: {border};
+                border-radius: 6px;
+                padding: 4px;
+                outline: none;
+            }}
+            QListWidget::item {{
+                background: transparent;
+                border: none;
+                padding: 0px;
+            }}
+            QListWidget::item:selected {{
+                background: transparent;
+                border: none;
+            }}
+            QScrollBar:vertical {{
+                border: none;
+                background-color: #0E120D;
+                width: 6px;
+                margin: 0px;
+                border-radius: 3px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: #242E1F;
+                min-height: 25px;
+                border-radius: 3px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: #3B4B32;
+            }}
+            QScrollBar::handle:vertical:pressed {{
+                background-color: #A6FF00;
+            }}
+            QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {{
+                height: 0px;
+                background: none;
+            }}
+            QScrollBar::add-page:vertical, QScrollBar::sub-page:vertical {{
+                background: none;
+            }}
+            QScrollBar:horizontal {{
+                height: 0px;
+                width: 0px;
+            }}
+        """)
 
     def add_queue_item(self, item: QueueItem):
         list_item = QListWidgetItem()
@@ -297,6 +308,7 @@ class FileQueueList(QListWidget):
         # Auto-select if first item
         if self.count() == 1:
             self.setCurrentItem(list_item)
+        self._update_border_style()
 
     def remove_queue_item(self, task_id: str):
         if task_id in self.item_by_task_id:
@@ -306,11 +318,13 @@ class FileQueueList(QListWidget):
             if task_id in self.cards:
                 del self.cards[task_id]
             del self.item_by_task_id[task_id]
+        self._update_border_style()
 
     def clear_all(self):
         self.clear()
         self.cards.clear()
         self.item_by_task_id.clear()
+        self._update_border_style()
 
     def update_item(self, item: QueueItem):
         if item.id in self.cards:
@@ -330,16 +344,53 @@ class FileQueueList(QListWidget):
         if selected_id:
             self.item_selected.emit(selected_id)
 
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self.count() == 0:
+            painter = QPainter(self.viewport())
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+            rect = self.viewport().rect()
+            cx = rect.center().x()
+            cy = rect.center().y() - 14
+
+            icon_color = "#9EF41A" if self._is_drag_active else "#555B4F"
+            pm = get_pixmap("file-plus", color=icon_color, size=30)
+            painter.drawPixmap(int(cx - 15), int(cy - 15), pm)
+
+            painter.setFont(QFont("Segoe UI", 9, QFont.Weight.Bold))
+            painter.setPen(QColor("#E8EBE4" if self._is_drag_active else "#8D9387"))
+            painter.drawText(QRectF(rect.left(), cy + 24, rect.width(), 20), Qt.AlignmentFlag.AlignCenter, "Drop files here")
+
+            painter.setFont(QFont("Segoe UI", 8, QFont.Weight.Normal))
+            painter.setPen(QColor("#555B4F"))
+            painter.drawText(QRectF(rect.left(), cy + 44, rect.width(), 16), Qt.AlignmentFlag.AlignCenter, "or click to browse")
+
+    def mousePressEvent(self, event):
+        if self.count() == 0 and event.button() == Qt.MouseButton.LeftButton:
+            self.empty_clicked.emit()
+            return
+        super().mousePressEvent(event)
+
     # Drag and Drop handling
     def dragEnterEvent(self, event):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
+            self._is_drag_active = True
+            self._update_border_style()
+
+    def dragLeaveEvent(self, event):
+        self._is_drag_active = False
+        self._update_border_style()
+        super().dragLeaveEvent(event)
 
     def dragMoveEvent(self, event):
         if event.mimeData().hasUrls():
             event.acceptProposedAction()
 
     def dropEvent(self, event):
+        self._is_drag_active = False
+        self._update_border_style()
         paths = []
         for url in event.mimeData().urls():
             if url.isLocalFile():

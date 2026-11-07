@@ -47,7 +47,7 @@ def main():
         print("\n❌ Build failed!")
         sys.exit(res.returncode)
 
-    exe_path = Path("dist/NotAconverter-1.1.1.exe")
+    exe_path = Path("dist/NotAconverter-1.2.0.exe")
     if exe_path.exists():
         size_bytes = exe_path.stat().st_size
         print("\n" + "=" * 60)

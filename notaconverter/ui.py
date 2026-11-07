@@ -16,7 +16,10 @@ from .config import AppConfig, TELEGRAM_MAX_DURATION
 from .media_probe import MediaProbe, MediaInfo, is_supported_file, ALL_SUPPORTED_EXTS
 from .converter import CropRect, ItemSettings
 from .task_queue import QueueManager, QueueItem, TaskStatus
-from .widgets import InteractiveCropWidget, TimelineRangeSlider, FileQueueList
+from .widgets import (
+    InteractiveCropWidget, TimelineRangeSlider, FileQueueList,
+    MediaControlBar, get_tactical_icon, get_pixmap
+)
 from .settings_dialog import SettingsDialog
 from .frame_cache import FrameCache, pil_to_qpixmap
 
@@ -24,7 +27,7 @@ from .frame_cache import FrameCache, pil_to_qpixmap
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("NotAconverter 1.1.1 — Telegram Sticker Studio")
+        self.setWindowTitle("NotAconverter 1.2.0 — Telegram Sticker Studio")
         self.resize(1140, 780)
         self.setMinimumSize(880, 560)
 
@@ -44,6 +47,7 @@ class MainWindow(QMainWindow):
         # ── Frame cache: pre-extracts all preview frames ──
         self.frame_cache = FrameCache(self)
         self.frame_cache.frames_ready.connect(self._on_frames_ready)
+        self.frame_cache.first_frame_ready.connect(self._on_first_frame_ready)
 
         # ── Playback timer: reads ONLY from cache, zero subprocess calls ──
         self.playback_timer = QTimer(self)
@@ -71,100 +75,115 @@ class MainWindow(QMainWindow):
     def _setup_style(self):
         self.setStyleSheet("""
             QMainWindow {
-                background-color: #121411;
+                background-color: #0F120E;
             }
             QWidget {
-                color: #E8EBE4;
+                color: #FFFFFF;
+                selection-background-color: #2D441B;
+                selection-color: #FFFFFF;
                 font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
             }
+            QLabel {
+                border: none;
+                background: transparent;
+            }
             QSplitter::handle {
-                background-color: #2B3026;
+                background-color: #222A1E;
                 width: 1px;
             }
             QPushButton {
-                background-color: #1E211B;
-                color: #E8EBE4;
-                border: 1px solid #2B3026;
-                border-radius: 3px;
+                background-color: #161A13;
+                color: #E8ECE4;
+                border: 1px solid #273321;
+                border-radius: 4px;
                 padding: 6px 14px;
                 font-size: 8.5pt;
-                font-weight: 600;
+                font-weight: 500;
             }
             QPushButton:hover {
-                background-color: #262B21;
-                border-color: #3E4636;
+                background-color: #1F261B;
+                border-color: #3C4E33;
+                color: #FFFFFF;
             }
             QPushButton:pressed {
-                background-color: #151813;
-                border-color: #9EF41A;
+                background-color: #10140E;
+                border-color: #A6FF00;
+            }
+            QPushButton:disabled {
+                background-color: #131710;
+                border-color: #1F261A;
+                color: #485441;
             }
             QPushButton#PrimaryBtn {
-                background-color: #9EF41A;
-                border: 1px solid #9EF41A;
-                color: #121411;
+                background-color: #A6FF00;
+                border: 1px solid #A6FF00;
+                color: #0F120E;
                 font-size: 9.5pt;
-                font-weight: 700;
+                font-weight: 800;
                 padding: 9px 20px;
-                border-radius: 3px;
+                border-radius: 4px;
+                letter-spacing: 0.3px;
             }
             QPushButton#PrimaryBtn:hover {
-                background-color: #ACF738;
-                border-color: #ACF738;
+                background-color: #B5FF24;
+                border-color: #B5FF24;
             }
             QPushButton#PrimaryBtn:disabled {
-                background-color: #181B16;
-                border-color: #2B3026;
-                color: #4D5247;
+                background-color: #161A13;
+                border-color: #273321;
+                color: #485441;
             }
             QPushButton#StopBtn {
-                background-color: #FF4D4D;
-                border: 1px solid #FF4D4D;
-                color: #121411;
+                background-color: #FF4444;
+                border: 1px solid #FF4444;
+                color: #FFFFFF;
                 font-size: 9.5pt;
                 font-weight: 700;
                 padding: 9px 20px;
-                border-radius: 3px;
+                border-radius: 4px;
             }
             QPushButton#StopBtn:hover {
                 background-color: #FF6666;
                 border-color: #FF6666;
             }
             QPushButton#ActivePreset {
-                background-color: #232B1C;
-                border: 1px solid #9EF41A;
-                color: #9EF41A;
+                background-color: #18260F;
+                border: 1px solid #A6FF00;
+                color: #A6FF00;
             }
             QDoubleSpinBox {
-                background-color: #181B16;
-                border: 1px solid #2B3026;
-                border-radius: 3px;
-                color: #E8EBE4;
+                background-color: #121610;
+                border: 1px solid #273321;
+                border-radius: 4px;
+                color: #FFFFFF;
                 padding: 3px 6px;
                 font-size: 8.5pt;
                 font-family: "Consolas", monospace;
+                selection-background-color: #2D441B;
+                selection-color: #FFFFFF;
             }
             QDoubleSpinBox::up-button, QDoubleSpinBox::down-button {
                 width: 14px;
-                background-color: #1E211B;
-                border: 1px solid #2B3026;
+                background-color: #182015;
+                border: 1px solid #273321;
             }
             QScrollBar:vertical {
                 border: none;
-                background-color: #121411;
+                background-color: #0F120E;
                 width: 6px;
                 margin: 0px;
                 border-radius: 3px;
             }
             QScrollBar::handle:vertical {
-                background-color: #262B21;
+                background-color: #242E1F;
                 min-height: 25px;
                 border-radius: 3px;
             }
             QScrollBar::handle:vertical:hover {
-                background-color: #363D2E;
+                background-color: #3B4B32;
             }
             QScrollBar::handle:vertical:pressed {
-                background-color: #9EF41A;
+                background-color: #A6FF00;
             }
             QScrollBar::sub-line:vertical, QScrollBar::add-line:vertical {
                 height: 0px;
@@ -186,21 +205,44 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(16, 14, 16, 14)
         main_layout.setSpacing(10)
 
-        # 1. Header Row
+        # 1. Header Row: Logo №09 + App Title & Subtitle + Settings
         header = QHBoxLayout()
         header.setSpacing(12)
 
-        title_box = QVBoxLayout()
-        title_box.setSpacing(2)
+        # Crisp Vector Logo №09 (Quantum Chevron)
+        logo_lbl = QLabel()
+        logo_lbl.setFixedSize(32, 32)
+        logo_path = Path(__file__).parent / "assets" / "logo.png"
+        if not logo_path.exists():
+            logo_path = Path("assets/logo.png")
+        if logo_path.exists():
+            pm = QPixmap(str(logo_path))
+            if not pm.isNull():
+                logo_lbl.setPixmap(pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        header.addWidget(logo_lbl)
 
-        app_title = QLabel("NOTACONVERTER")
-        app_title.setStyleSheet("font-size: 14pt; font-weight: 800; letter-spacing: 1px; color: #E8EBE4;")
+        title_box = QHBoxLayout()
+        title_box.setSpacing(8)
+        title_box.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
 
-        app_desc = QLabel("VP9 WEBM COMPRESSION ENGINE // TELEGRAM COMPLIANCE [ 512PX • ≤256KB • ≤3.0S ]")
-        app_desc.setStyleSheet("font-size: 8pt; color: #92968C; font-family: 'Consolas', monospace;")
+        app_title = QLabel("NotAconverter")
+        app_title.setStyleSheet("font-size: 13pt; font-weight: 800; letter-spacing: 0.5px; color: #E8EBE4;")
+
+        self.lbl_version_badge = QLabel("1.2.0")
+        self.lbl_version_badge.setFixedHeight(18)
+        self.lbl_version_badge.setStyleSheet("""
+            background-color: #14220A;
+            color: #A6FF00;
+            border: 1px solid #284414;
+            border-radius: 3px;
+            padding: 1px 6px;
+            font-size: 7.5pt;
+            font-weight: 700;
+            font-family: 'Consolas', monospace;
+        """)
 
         title_box.addWidget(app_title)
-        title_box.addWidget(app_desc)
+        title_box.addWidget(self.lbl_version_badge)
         header.addLayout(title_box)
 
         header.addStretch()
@@ -210,6 +252,7 @@ class MainWindow(QMainWindow):
         header.addWidget(self.dep_warning)
 
         self.btn_settings = QPushButton("SETTINGS")
+        self.btn_settings.setIcon(get_tactical_icon("settings", size=13))
         self.btn_settings.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_settings.clicked.connect(self._open_settings)
         header.addWidget(self.btn_settings)
@@ -222,7 +265,8 @@ class MainWindow(QMainWindow):
 
         # --- Left Panel: Queue & File Management ---
         left_panel = QFrame()
-        left_panel.setStyleSheet("background-color: #181B16; border: 1px solid #2B3026; border-radius: 4px;")
+        left_panel.setObjectName("LeftPanel")
+        left_panel.setStyleSheet("QFrame#LeftPanel { background-color: #121411; border: 1px solid #1E231B; border-radius: 6px; }")
         v_left = QVBoxLayout(left_panel)
         v_left.setContentsMargins(12, 12, 12, 12)
         v_left.setSpacing(10)
@@ -233,20 +277,20 @@ class MainWindow(QMainWindow):
         q_title.setStyleSheet("font-size: 9.5pt; font-weight: 700; color: #E8EBE4; letter-spacing: 0.5px;")
         self.lbl_queue_count = QLabel("0")
         self.lbl_queue_count.setStyleSheet("""
-            background-color: #1E211B;
+            background-color: transparent;
             color: #9EF41A;
-            font-size: 7.5pt;
-            font-weight: bold;
+            font-size: 8.5pt;
+            font-weight: 700;
             font-family: 'Consolas', monospace;
-            padding: 2px 7px;
-            border: 1px solid #2B3026;
-            border-radius: 3px;
+            padding: 0px 4px;
+            border: none;
         """)
         q_head.addWidget(q_title)
         q_head.addWidget(self.lbl_queue_count)
         q_head.addStretch()
 
         self.btn_clear = QPushButton("CLEAR")
+        self.btn_clear.setIcon(get_tactical_icon("trash", size=13))
         self.btn_clear.clicked.connect(self._clear_queue)
         q_head.addWidget(self.btn_clear)
         v_left.addLayout(q_head)
@@ -257,11 +301,13 @@ class MainWindow(QMainWindow):
 
         # Queue Action Buttons
         btn_box = QHBoxLayout()
-        self.btn_add_files = QPushButton("[ + ] ADD FILES")
+        self.btn_add_files = QPushButton("ADD FILES")
+        self.btn_add_files.setIcon(get_tactical_icon("file-plus", size=14))
         self.btn_add_files.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_add_files.clicked.connect(self._select_files)
 
-        self.btn_add_folder = QPushButton("[ + ] FOLDER")
+        self.btn_add_folder = QPushButton("FOLDER")
+        self.btn_add_folder.setIcon(get_tactical_icon("folder-plus", size=14))
         self.btn_add_folder.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_add_folder.clicked.connect(self._select_folder)
 
@@ -272,18 +318,38 @@ class MainWindow(QMainWindow):
         # Export Directory Bar
         dest_box = QVBoxLayout()
         dest_box.setSpacing(4)
-        lbl_dest = QLabel("EXPORT DIRECTORY:")
+        lbl_dest = QLabel("EXPORT DIRECTORY")
         lbl_dest.setStyleSheet("color: #92968C; font-size: 8pt; font-weight: 600; font-family: 'Consolas', monospace;")
 
         dest_row = QHBoxLayout()
-        self.lbl_dest_path = QLabel("—")
-        self.lbl_dest_path.setStyleSheet("color: #E8EBE4; font-size: 8pt; font-family: 'Consolas', monospace;")
-        self.lbl_dest_path.setWordWrap(True)
+        dest_row.setContentsMargins(0, 0, 0, 0)
+        dest_row.setSpacing(6)
 
-        self.btn_change_dest = QPushButton("CHANGE")
+        self.lbl_dest_path = QLabel()
+        self.lbl_dest_path.setFixedHeight(28)
+        self.lbl_dest_path.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        self.lbl_dest_path.setStyleSheet("""
+            QLabel {
+                background-color: #0E100D;
+                border: 1px solid #1E231B;
+                border-radius: 4px;
+                padding: 0px 8px;
+                color: #E8EBE4;
+                font-size: 8pt;
+                font-family: 'Consolas', monospace;
+            }
+        """)
+
+        self.btn_change_dest = QPushButton()
+        self.btn_change_dest.setFixedSize(28, 28)
+        self.btn_change_dest.setIcon(get_tactical_icon("folder-edit", size=14))
+        self.btn_change_dest.setToolTip("Change export destination folder")
         self.btn_change_dest.clicked.connect(self._change_export_folder)
 
-        self.btn_open_folder = QPushButton("OPEN DIR")
+        self.btn_open_folder = QPushButton()
+        self.btn_open_folder.setFixedSize(28, 28)
+        self.btn_open_folder.setIcon(get_tactical_icon("folder-open", size=14))
+        self.btn_open_folder.setToolTip("Open export folder in explorer")
         self.btn_open_folder.clicked.connect(self._open_export_folder)
 
         dest_row.addWidget(self.lbl_dest_path, 1)
@@ -298,125 +364,60 @@ class MainWindow(QMainWindow):
 
         # --- Right Panel: Interactive Visual Crop & Trim Editor ---
         right_panel = QFrame()
-        right_panel.setStyleSheet("background-color: #181B16; border: 1px solid #2B3026; border-radius: 4px;")
+        right_panel.setObjectName("RightPanel")
+        right_panel.setStyleSheet("QFrame#RightPanel { background-color: #121411; border: 1px solid #1E231B; border-radius: 6px; }")
         v_right = QVBoxLayout(right_panel)
         v_right.setContentsMargins(14, 14, 14, 14)
         v_right.setSpacing(10)
 
         # Editor Header
         ed_head = QHBoxLayout()
-        self.lbl_item_name = QLabel("NO MEDIA SELECTED")
-        self.lbl_item_name.setStyleSheet("font-size: 10pt; font-weight: 700; color: #E8EBE4;")
-        self.lbl_item_details = QLabel("")
-        self.lbl_item_details.setStyleSheet("font-size: 8pt; color: #92968C; font-family: 'Consolas', monospace;")
+        ed_head.setContentsMargins(0, 0, 0, 0)
+        ed_head.setSpacing(10)
+
+        self.lbl_item_name = QLabel("No media selected")
+        self.lbl_item_name.setStyleSheet("font-size: 9.5pt; font-weight: 700; color: #8D9387;")
 
         ed_head.addWidget(self.lbl_item_name)
-        ed_head.addSpacing(8)
-        ed_head.addWidget(self.lbl_item_details)
         ed_head.addStretch()
 
-        self.lbl_export_spec = QLabel("TARGET SPEC: 512×512 • ≤256 KB • VP9")
-        self.lbl_export_spec.setStyleSheet("""
-            background-color: #1E211B;
-            color: #9EF41A;
-            font-size: 7.5pt;
-            font-weight: 700;
-            font-family: 'Consolas', monospace;
-            padding: 3px 8px;
-            border: 1px solid #2B3026;
-            border-radius: 3px;
-        """)
-        ed_head.addWidget(self.lbl_export_spec)
+        # Clean segmented mode toggle [ Preview | Crop ]
+        mode_box = QHBoxLayout()
+        mode_box.setSpacing(2)
+
+        self.btn_mode_preview = QPushButton("Preview")
+        self.btn_mode_preview.setIcon(get_tactical_icon("maximize-2", size=12))
+        self.btn_mode_preview.setFixedHeight(26)
+        self.btn_mode_preview.clicked.connect(lambda: self._set_view_mode("preview"))
+
+        self.btn_mode_crop = QPushButton("Crop")
+        self.btn_mode_crop.setIcon(get_tactical_icon("crop", size=12))
+        self.btn_mode_crop.setFixedHeight(26)
+        self.btn_mode_crop.clicked.connect(lambda: self._set_view_mode("crop"))
+
+        mode_box.addWidget(self.btn_mode_preview)
+        mode_box.addWidget(self.btn_mode_crop)
+        ed_head.addLayout(mode_box)
+
         v_right.addLayout(ed_head)
 
         # Crop Canvas Viewport
         self.crop_widget = InteractiveCropWidget()
         v_right.addWidget(self.crop_widget, 1)
 
-        # Crop Presets Bar
-        crop_bar = QHBoxLayout()
-        crop_bar.setSpacing(6)
-        lbl_crop = QLabel("CROP:")
-        lbl_crop.setStyleSheet("color: #92968C; font-size: 8pt; font-weight: 700; font-family: 'Consolas', monospace;")
-        crop_bar.addWidget(lbl_crop)
-
-        self.btn_preset_square = QPushButton("1:1 SQUARE")
-        self.btn_preset_square.clicked.connect(lambda: self._set_aspect_preset(1.0))
-        crop_bar.addWidget(self.btn_preset_square)
-
-        self.btn_preset_free = QPushButton("FREE CROP")
-        self.btn_preset_free.clicked.connect(lambda: self._set_aspect_preset(None))
-        crop_bar.addWidget(self.btn_preset_free)
-
-        self.btn_preset_4_3 = QPushButton("4:3")
-        self.btn_preset_4_3.clicked.connect(lambda: self._set_aspect_preset(4 / 3))
-        crop_bar.addWidget(self.btn_preset_4_3)
-
-        self.btn_preset_16_9 = QPushButton("16:9")
-        self.btn_preset_16_9.clicked.connect(lambda: self._set_aspect_preset(16 / 9))
-        crop_bar.addWidget(self.btn_preset_16_9)
-
-        self.btn_reset_crop = QPushButton("RESET")
-        self.btn_reset_crop.clicked.connect(self._reset_crop)
-        crop_bar.addWidget(self.btn_reset_crop)
-
-        crop_bar.addStretch()
-
-        self.lbl_target_dim = QLabel("TARGET: 512 × 512 PX")
-        self.lbl_target_dim.setStyleSheet("color: #9EF41A; font-weight: 700; font-size: 8pt; font-family: 'Consolas', monospace;")
-        crop_bar.addWidget(self.lbl_target_dim)
-
-        v_right.addLayout(crop_bar)
-
-        # Trimming Section (Timeline Slider & Transport)
+        # Trimming & Parameter Control Section (Media Control Bar + Timeline Slider)
         self.trim_container = QWidget()
         v_trim = QVBoxLayout(self.trim_container)
-        v_trim.setContentsMargins(0, 4, 0, 0)
+        v_trim.setContentsMargins(0, 2, 0, 0)
         v_trim.setSpacing(6)
 
-        self.timeline_slider = TimelineRangeSlider()
+        # Compact Settings Bar directly ABOVE timeline
+        self.media_bar = MediaControlBar(self)
+        v_trim.addWidget(self.media_bar)
+
+        # Interactive Timeline Range Slider
+        self.timeline_slider = TimelineRangeSlider(self)
         v_trim.addWidget(self.timeline_slider)
-
-        # Transport & Spinboxes Row
-        trans_row = QHBoxLayout()
-        trans_row.setSpacing(8)
-
-        self.btn_play = QPushButton("PLAY [ ▶ ]")
-        self.btn_play.setFixedWidth(100)
-        self.btn_play.clicked.connect(self._toggle_playback)
-        trans_row.addWidget(self.btn_play)
-
-        lbl_start = QLabel("START:")
-        lbl_start.setStyleSheet("color: #92968C; font-size: 8pt; font-family: 'Consolas', monospace;")
-        trans_row.addWidget(lbl_start)
-
-        self.spin_start = QDoubleSpinBox()
-        self.spin_start.setRange(0.0, 999.0)
-        self.spin_start.setSingleStep(0.1)
-        self.spin_start.setDecimals(2)
-        self.spin_start.setSuffix("s")
-        self.spin_start.valueChanged.connect(self._on_spin_start_changed)
-        trans_row.addWidget(self.spin_start)
-
-        lbl_end = QLabel("END:")
-        lbl_end.setStyleSheet("color: #92968C; font-size: 8pt; font-family: 'Consolas', monospace;")
-        trans_row.addWidget(lbl_end)
-
-        self.spin_end = QDoubleSpinBox()
-        self.spin_end.setRange(0.0, 999.0)
-        self.spin_end.setSingleStep(0.1)
-        self.spin_end.setDecimals(2)
-        self.spin_end.setSuffix("s")
-        self.spin_end.valueChanged.connect(self._on_spin_end_changed)
-        trans_row.addWidget(self.spin_end)
-
-        self.btn_fit_3s = QPushButton("FIT [ 3.0s ]")
-        self.btn_fit_3s.setToolTip("Clamp trim segment to maximum 3.0s Telegram sticker duration")
-        self.btn_fit_3s.clicked.connect(self.timeline_slider.fit_to_three_seconds)
-        trans_row.addWidget(self.btn_fit_3s)
-
-        trans_row.addStretch()
-        v_trim.addLayout(trans_row)
 
         v_right.addWidget(self.trim_container)
 
@@ -455,7 +456,8 @@ class MainWindow(QMainWindow):
         status_box.addWidget(self.global_progress)
         footer.addLayout(status_box, 1)
 
-        self.btn_export = QPushButton("EXPORT STICKERS [ EXEC ]")
+        self.btn_export = QPushButton("EXPORT STICKERS")
+        self.btn_export.setIcon(get_tactical_icon("download", normal_color="#121411", active_color="#121411", size=15))
         self.btn_export.setObjectName("PrimaryBtn")
         self.btn_export.setCursor(Qt.CursorShape.PointingHandCursor)
         self.btn_export.clicked.connect(self._on_export_clicked)
@@ -468,11 +470,53 @@ class MainWindow(QMainWindow):
             btn.setFocusPolicy(Qt.FocusPolicy.NoFocus)
 
         self._update_export_destination_label()
+        self._update_mode_buttons()
+        self._update_ui_state()
+
+    def _set_view_mode(self, mode: str):
+        self.crop_widget.set_view_mode(mode)
+        self._update_mode_buttons()
+
+    def _on_crop_view_mode_changed(self, mode: str):
+        self._update_mode_buttons()
+
+    def _update_mode_buttons(self):
+        is_prev = (self.crop_widget.view_mode == "preview")
+        active_style = """
+            QPushButton {
+                background-color: #17240E;
+                color: #A6FF00;
+                border: 1px solid #A6FF00;
+                border-radius: 3px;
+                padding: 3px 10px;
+                font-weight: 700;
+                font-size: 8.5pt;
+            }
+        """
+        inactive_style = """
+            QPushButton {
+                background-color: #141811;
+                color: #929E8A;
+                border: 1px solid #273321;
+                border-radius: 3px;
+                padding: 3px 10px;
+                font-weight: 500;
+                font-size: 8.5pt;
+            }
+            QPushButton:hover {
+                background-color: #1D2419;
+                color: #FFFFFF;
+                border-color: #3C4E33;
+            }
+        """
+        self.btn_mode_preview.setStyleSheet(active_style if is_prev else inactive_style)
+        self.btn_mode_crop.setStyleSheet(inactive_style if is_prev else active_style)
 
     def _connect_signals(self):
         self.queue_list.item_selected.connect(self._on_item_selected)
         self.queue_list.item_removed.connect(self._on_item_removed)
         self.queue_list.files_dropped.connect(self._add_file_paths)
+        self.queue_list.empty_clicked.connect(self._select_files)
 
         self.queue_mgr.item_added.connect(self._on_queue_item_added)
         self.queue_mgr.item_updated.connect(self._on_queue_item_updated)
@@ -480,8 +524,19 @@ class MainWindow(QMainWindow):
         self.queue_mgr.all_finished.connect(self._on_all_finished)
 
         self.crop_widget.crop_changed.connect(self._on_crop_changed)
+        self.crop_widget.view_mode_changed.connect(self._on_crop_view_mode_changed)
+        self.timeline_slider.interaction_started.connect(self._stop_playback)
         self.timeline_slider.range_changed.connect(self._on_trim_range_changed)
         self.timeline_slider.playhead_changed.connect(self._on_playhead_changed)
+
+        self.media_bar.play_toggled.connect(self._toggle_playback)
+        self.media_bar.trim_updated.connect(self._on_control_bar_trim_changed)
+        self.media_bar.speed_updated.connect(self._on_speed_changed)
+        self.media_bar.fps_updated.connect(self._on_fps_changed)
+        self.media_bar.resolution_updated.connect(self._on_resolution_changed)
+        self.media_bar.fit_3s_requested.connect(self.timeline_slider.fit_to_three_seconds)
+        self.media_bar.crop_preset_requested.connect(self._set_aspect_preset)
+        self.media_bar.reset_crop_requested.connect(self._reset_crop)
 
     def _check_dependencies(self):
         missing = []
@@ -544,8 +599,9 @@ class MainWindow(QMainWindow):
         self.current_item = None
         self.lbl_queue_count.setText("0")
         self.crop_widget.set_image(None, 1, 1)
-        self.lbl_item_name.setText("No file selected")
-        self.lbl_item_details.setText("")
+        self.lbl_item_name.setText("No media selected")
+        self.lbl_item_name.setStyleSheet("font-size: 9.5pt; font-weight: 700; color: #8D9387;")
+        self._update_export_destination_label()
         self._update_ui_state()
 
     def _on_queue_item_added(self, item: QueueItem):
@@ -562,11 +618,12 @@ class MainWindow(QMainWindow):
             self.frame_cache.clear()
             self.current_item = None
             self.crop_widget.set_image(None, 1, 1)
-            self.lbl_item_name.setText("No file selected")
-            self.lbl_item_details.setText("")
+            self.lbl_item_name.setText("No media selected")
+        self.lbl_item_name.setStyleSheet("font-size: 9.5pt; font-weight: 700; color: #8D9387;")
         self.queue_mgr.remove_item(task_id)
         self.queue_list.remove_queue_item(task_id)
         self.lbl_queue_count.setText(str(len(self.queue_mgr.items)))
+        self._update_export_destination_label()
         self._update_ui_state()
 
     def _on_item_selected(self, task_id: str):
@@ -577,37 +634,49 @@ class MainWindow(QMainWindow):
         self._stop_playback()
         self.current_item = item
 
+        # Immediately clear old media from viewer so photo never leaks into video
+        self.crop_widget.set_image(None, item.info.width, item.info.height)
+
         self.lbl_item_name.setText(item.info.filename)
-        self.lbl_item_details.setText(
-            f"{item.info.width}×{item.info.height} • "
-            f"{item.info.display_duration} • {item.info.display_size}"
-        )
+        self.lbl_item_name.setStyleSheet("font-size: 9.5pt; font-weight: 700; color: #E8EBE4;")
 
         # Show / hide timeline controls for static images
         is_dynamic = item.info.is_video or item.info.is_animated
-        self.trim_container.setVisible(is_dynamic)
+        self.timeline_slider.setVisible(is_dynamic)
+        self.media_bar.btn_play.setVisible(is_dynamic)
+        self.media_bar.btn_trim.setVisible(is_dynamic)
+        self.media_bar.btn_speed.setVisible(is_dynamic)
+        self.media_bar.btn_fps.setVisible(is_dynamic)
+        self.trim_container.setVisible(True)
+
+        spd = getattr(item.settings, "speed", 1.0)
+        source_dur = item.info.duration if item.info.duration > 0 else 3.0
+        effective_dur = source_dur / max(0.1, spd)
+
+        src_start = max(0.0, item.settings.trim_start)
+        src_end = item.settings.trim_end if item.settings.trim_end > src_start else min(source_dur, src_start + 3.0 * spd)
+        start_out = src_start / max(0.1, spd)
+        end_out = src_end / max(0.1, spd)
 
         # Configure timeline
         if is_dynamic:
-            dur = item.info.duration if item.info.duration > 0 else 3.0
-            self.timeline_slider.set_duration(dur, default_clamp_3s=True)
-            self.spin_start.setRange(0.0, dur)
-            self.spin_end.setRange(0.0, dur)
+            self.timeline_slider.set_speed(spd)
+            self.timeline_slider.set_duration(effective_dur, default_clamp_3s=False)
+            self.timeline_slider.set_range(start_out, end_out)
+            self.media_bar.update_trim_display(start_out, end_out, effective_dur, source_dur=src_end - src_start)
+        else:
+            self.media_bar.update_trim_display(0.0, 1.0, 1.0, source_dur=1.0)
 
-            start = item.settings.trim_start
-            end = item.settings.trim_end if item.settings.trim_end > 0 else min(dur, 3.0)
-            self.timeline_slider.set_range(start, end)
-            self.spin_start.setValue(start)
-            self.spin_end.setValue(end)
+        self.media_bar.update_speed_display(spd)
+        self.media_bar.update_fps_display(getattr(item.settings, "fps", 0))
 
         # ── Kick off frame cache loading ──
         # GIF/WEBP: synchronous PIL decode (~instant)
         # Video: background ffmpeg extraction (UI stays responsive)
         self.lbl_global_status.setText(f"Loading preview for {item.info.filename}...")
-        duration = item.info.duration if item.info.duration > 0 else 1.0
         self.frame_cache.load(
             path=item.info.path,
-            duration=duration,
+            duration=source_dur,
             orig_w=item.info.width,
             orig_h=item.info.height,
             is_animated_image=item.info.is_animated and not item.info.is_video,
@@ -615,7 +684,7 @@ class MainWindow(QMainWindow):
 
         # For GIF/images the frames are already ready (sync load),
         # so show the first frame immediately:
-        self._show_cached_frame(item.settings.trim_start)
+        self._show_cached_frame(src_start)
 
         # Restore crop
         self.crop_widget.set_crop_rect(item.settings.crop)
@@ -625,16 +694,24 @@ class MainWindow(QMainWindow):
     #  Frame Preview & Playback  (ALL from cache, zero ffmpeg)
     # ════════════════════════════════════════════════════════
 
+    def _on_first_frame_ready(self, qimg: QImage, timestamp: float):
+        """Immediately displays frame 0 of video without waiting for full 90-frame batch."""
+        if self.current_item and (self.current_item.info.is_video or self.current_item.info.is_animated):
+            pm = QPixmap.fromImage(qimg)
+            self.crop_widget.set_image(pm, self.current_item.info.width, self.current_item.info.height)
+            self._update_target_dimensions_display()
+
     def _on_frames_ready(self):
         """Called when background video frame extraction finishes."""
         self.lbl_global_status.setText(
             f"Preview ready ({self.frame_cache.frame_count} frames cached)"
         )
         if self.current_item:
-            self._show_cached_frame(self.timeline_slider.current_time)
+            spd = getattr(self.current_item.settings, "speed", 1.0)
+            self._show_cached_frame(self.timeline_slider.current_time * spd)
 
     def _show_cached_frame(self, timestamp: float):
-        """Display a frame from the cache in the crop widget. Instant lookup."""
+        """Display a frame from the cache in the crop widget. Instant lookup using source timestamp."""
         if not self.current_item:
             return
         pix = self.frame_cache.get_frame_at(timestamp)
@@ -660,22 +737,22 @@ class MainWindow(QMainWindow):
         if self.frame_cache.frame_count == 0:
             return  # frames not ready yet
         self.is_playing = True
-        self.btn_play.setText("PAUSE [ ⏸ ]")
-        self.btn_play.setStyleSheet("background-color: #232B1C; border: 1px solid #9EF41A; color: #9EF41A;")
+        self.media_bar.set_playing_state(True)
         self.playback_timer.start()
 
     def _stop_playback(self):
         self.is_playing = False
         self.playback_timer.stop()
-        self.btn_play.setText("PLAY [ ▶ ]")
-        self.btn_play.setStyleSheet("")
+        self.media_bar.set_playing_state(False)
 
     def _on_playback_step(self):
-        """Advance playhead and show the next cached frame. No subprocess."""
+        """Advance playhead in output time and show corresponding source frame."""
         if not self.current_item or self.frame_cache.frame_count == 0:
             self._stop_playback()
             return
 
+        spd = getattr(self.current_item.settings, "speed", 1.0) if self.current_item else 1.0
+        # Playhead advances by real elapsed time dt in output coordinates
         dt = self.playback_timer.interval() / 1000.0
         new_t = self.timeline_slider.current_time + dt
         if new_t > self.timeline_slider.end_time:
@@ -683,7 +760,8 @@ class MainWindow(QMainWindow):
 
         self.timeline_slider.current_time = new_t
         self.timeline_slider.update()
-        self._show_cached_frame(new_t)
+        # Retrieve frame from cache using source time: t_src = t_out * spd
+        self._show_cached_frame(new_t * spd)
 
     # ════════════════════════════════════════════════════════
     #  Cropping & Trimming Handlers
@@ -731,51 +809,121 @@ class MainWindow(QMainWindow):
                 self.queue_list.update_item(self.current_item)
             self._update_target_dimensions_display()
 
-    def _on_trim_range_changed(self, start: float, end: float):
+    def _on_trim_range_changed(self, start_out: float, end_out: float):
         if self.current_item:
-            self.current_item.settings.trim_start = start
-            self.current_item.settings.trim_end = end
+            spd = getattr(self.current_item.settings, "speed", 1.0)
+            src_start = start_out * spd
+            src_end = end_out * spd
+            self.current_item.settings.trim_start = src_start
+            self.current_item.settings.trim_end = src_end
             if self.current_item.status == TaskStatus.SUCCESS:
                 self.current_item.status = TaskStatus.QUEUED
                 self.current_item.status_text = "Ready"
                 self.queue_list.update_item(self.current_item)
-            self.spin_start.blockSignals(True)
-            self.spin_end.blockSignals(True)
-            self.spin_start.setValue(start)
-            self.spin_end.setValue(end)
-            self.spin_start.blockSignals(False)
-            self.spin_end.blockSignals(False)
+            effective_dur = self.timeline_slider.total_duration
+            self.media_bar.update_trim_display(start_out, end_out, effective_dur, source_dur=src_end - src_start)
+
+    def _on_control_bar_trim_changed(self, start_out: float, end_out: float):
+        if self.current_item:
+            spd = getattr(self.current_item.settings, "speed", 1.0)
+            src_start = start_out * spd
+            src_end = end_out * spd
+            self.current_item.settings.trim_start = src_start
+            self.current_item.settings.trim_end = src_end
+            if self.current_item.status == TaskStatus.SUCCESS:
+                self.current_item.status = TaskStatus.QUEUED
+                self.current_item.status_text = "Ready"
+                self.queue_list.update_item(self.current_item)
+            self.timeline_slider.set_range(start_out, end_out)
+            self._show_cached_frame(src_start)
+
+    def _on_speed_changed(self, speed: float):
+        if not self.current_item:
+            return
+        self.current_item.settings.speed = speed
+        if self.current_item.status == TaskStatus.SUCCESS:
+            self.current_item.status = TaskStatus.QUEUED
+            self.current_item.status_text = "Ready"
+            self.queue_list.update_item(self.current_item)
+
+        source_dur = self.current_item.info.duration if self.current_item.info.duration > 0 else 3.0
+        new_effective_total = source_dur / max(0.1, speed)
+
+        # Preserve the current desired output duration (e.g. 3.0s), clamped to new total
+        curr_out_dur = self.timeline_slider.selected_duration
+        if curr_out_dur <= 0.05:
+            curr_out_dur = min(new_effective_total, 3.0)
+        out_dur = min(curr_out_dur, new_effective_total)
+
+        start_out = self.timeline_slider.start_time
+        if start_out + out_dur > new_effective_total:
+            start_out = max(0.0, new_effective_total - out_dur)
+        end_out = min(new_effective_total, start_out + out_dur)
+
+        self.timeline_slider.set_speed(speed)
+        self.timeline_slider.set_duration(new_effective_total, default_clamp_3s=False)
+        self.timeline_slider.set_range(start_out, end_out)
+
+        src_start = start_out * speed
+        src_end = end_out * speed
+        self.current_item.settings.trim_start = src_start
+        self.current_item.settings.trim_end = src_end
+
+        self.media_bar.update_speed_display(speed)
+        self.media_bar.update_trim_display(start_out, end_out, new_effective_total, source_dur=src_end - src_start)
+
+        self._show_cached_frame(src_start)
+
+    def _on_fps_changed(self, fps: int):
+        if self.current_item:
+            self.current_item.settings.fps = fps
+            if self.current_item.status == TaskStatus.SUCCESS:
+                self.current_item.status = TaskStatus.QUEUED
+                self.current_item.status_text = "Ready"
+                self.queue_list.update_item(self.current_item)
+
+    def _on_resolution_changed(self, w: int, h: int, locked: bool):
+        if self.current_item:
+            self.current_item.settings.custom_width = w
+            self.current_item.settings.custom_height = h
+            self.current_item.settings.lock_aspect_ratio = locked
+            if self.current_item.status == TaskStatus.SUCCESS:
+                self.current_item.status = TaskStatus.QUEUED
+                self.current_item.status_text = "Ready"
+                self.queue_list.update_item(self.current_item)
+            self.crop_widget.set_target_dimensions(w, h, locked)
+            self._update_target_dimensions_display()
 
     def _on_playhead_changed(self, current_time: float):
-        """Debounced scrub: schedule a cache lookup instead of blocking."""
-        self._pending_scrub_time = current_time
+        """Debounced scrub: current_time is in output seconds."""
+        spd = getattr(self.current_item.settings, "speed", 1.0) if self.current_item else 1.0
+        self._pending_scrub_time = current_time * spd
         if not self._scrub_timer.isActive():
             self._scrub_timer.start()
 
     def _do_scrub_update(self):
-        """Perform the actual frame display for the latest scrub position."""
+        """Perform the actual frame display for the latest scrub position in source time."""
         self._show_cached_frame(self._pending_scrub_time)
-
-    def _on_spin_start_changed(self, val: float):
-        if self.current_item:
-            end = max(val + 0.05, self.spin_end.value())
-            self.timeline_slider.set_range(val, end)
-
-    def _on_spin_end_changed(self, val: float):
-        if self.current_item:
-            start = min(val - 0.05, self.spin_start.value())
-            self.timeline_slider.set_range(start, val)
 
     def _update_target_dimensions_display(self):
         if not self.current_item:
-            self.lbl_target_dim.setText("Output: 512 × 512 px")
             return
         info = self.current_item.info
         crop = self.current_item.settings.crop
         from .converter import StickerConverter
         calc = StickerConverter(self.config)
-        w, h = calc.calculate_target_dims(info.width, info.height, crop)
-        self.lbl_target_dim.setText(f"Output: {w} × {h} px (VP9)")
+        w, h = calc.calculate_target_dims(
+            info.width, info.height, crop,
+            self.current_item.settings.custom_width,
+            self.current_item.settings.custom_height
+        )
+        locked = getattr(self.current_item.settings, "lock_aspect_ratio", True)
+        ref_aspect = info.width / max(1, info.height)
+        if crop and crop.is_valid:
+            ref_aspect = crop.width / max(1, crop.height)
+
+        self.crop_widget.set_target_dimensions(w, h, locked)
+        self.media_bar.update_resolution_display(w, h, locked, ref_aspect)
 
     # ════════════════════════════════════════════════════════
     #  Export & Destinations
@@ -794,10 +942,36 @@ class MainWindow(QMainWindow):
     def _update_export_destination_label(self):
         folder = self._current_export_folder()
         if folder:
+            self.lbl_dest_path.clear()
             self.lbl_dest_path.setText(folder)
+            self.lbl_dest_path.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+            self.lbl_dest_path.setStyleSheet("""
+                QLabel {
+                    background-color: #0E100D;
+                    border: 1px solid #1E231B;
+                    border-radius: 4px;
+                    padding: 0px 8px;
+                    color: #E8EBE4;
+                    font-size: 8pt;
+                    font-family: 'Consolas', monospace;
+                }
+            """)
             self.lbl_dest_path.setToolTip(folder)
+            self.btn_open_folder.setEnabled(os.path.isdir(folder))
         else:
-            self.lbl_dest_path.setText("First file folder")
+            self.lbl_dest_path.clear()
+            self.lbl_dest_path.setPixmap(get_pixmap("ban", color="#555B4F", size=14))
+            self.lbl_dest_path.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.lbl_dest_path.setStyleSheet("""
+                QLabel {
+                    background-color: #0E100D;
+                    border: 1px solid #1E231B;
+                    border-radius: 4px;
+                    padding: 0px 8px;
+                }
+            """)
+            self.lbl_dest_path.setToolTip("Папка экспорта не выбрана (по умолчанию сохранится рядом с исходником)")
+            self.btn_open_folder.setEnabled(False)
 
     def _change_export_folder(self):
         folder = QFileDialog.getExistingDirectory(self, "Select Export Folder for this Session")
@@ -828,7 +1002,8 @@ class MainWindow(QMainWindow):
     def _on_export_clicked(self):
         if self.queue_mgr.is_running:
             self.queue_mgr.cancel_all()
-            self.btn_export.setText("EXPORT STICKERS [ EXEC ]")
+            self.btn_export.setText("EXPORT STICKERS")
+            self.btn_export.setIcon(get_tactical_icon("download", normal_color="#121411", active_color="#121411", size=15))
             self.btn_export.setObjectName("PrimaryBtn")
             self.btn_export.setStyle(self.btn_export.style())
             self.lbl_global_status.setText("STATUS: OPERATION ABORTED BY USER")
@@ -844,7 +1019,8 @@ class MainWindow(QMainWindow):
             return
 
         self._stop_playback()
-        self.btn_export.setText("CANCEL CONVERSION [ STOP ]")
+        self.btn_export.setText("CANCEL EXPORT")
+        self.btn_export.setIcon(get_tactical_icon("square-stop", normal_color="#121411", active_color="#121411", size=15))
         self.btn_export.setObjectName("StopBtn")
         self.btn_export.setStyle(self.btn_export.style())
         self.lbl_global_status.setText(f"PROCESSING // ENCODING {len(self.queue_mgr.items)} ITEM(S) WITH VP9...")
@@ -865,7 +1041,8 @@ class MainWindow(QMainWindow):
         pass
 
     def _on_all_finished(self):
-        self.btn_export.setText("EXPORT STICKERS [ EXEC ]")
+        self.btn_export.setText("EXPORT STICKERS")
+        self.btn_export.setIcon(get_tactical_icon("download", normal_color="#121411", active_color="#121411", size=15))
         self.btn_export.setObjectName("PrimaryBtn")
         self.btn_export.setStyle(self.btn_export.style())
 

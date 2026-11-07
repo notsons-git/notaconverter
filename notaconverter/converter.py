@@ -34,7 +34,11 @@ class ItemSettings:
     trim_start: float = 0.0
     trim_end: float = 0.0  # 0.0 means use full/auto clamped
     crop: Optional[CropRect] = None
-    fps: int = 30
+    fps: int = 0  # 0 = Auto (source up to 30), or 15, 24, 30
+    speed: float = 1.0  # 1.00x, 1.25x, 1.50x, 2.00x, etc.
+    custom_width: Optional[int] = None
+    custom_height: Optional[int] = None
+    lock_aspect_ratio: bool = True
     enable_unsharp: bool = True
     custom_name: str = ""
 
@@ -57,11 +61,23 @@ class StickerConverter:
     def cancel(self):
         self.is_cancelled = True
 
-    def calculate_target_dims(self, orig_w: int, orig_h: int, crop: Optional[CropRect] = None) -> Tuple[int, int]:
+    def calculate_target_dims(
+        self,
+        orig_w: int,
+        orig_h: int,
+        crop: Optional[CropRect] = None,
+        custom_w: Optional[int] = None,
+        custom_h: Optional[int] = None
+    ) -> Tuple[int, int]:
         """
-        Calculate sticker dimensions so one side is exactly 512 and the other <= 512.
-        Both dimensions are even numbers (required by VP9).
+        Calculate sticker dimensions so one side is exactly 512 and the other <= 512,
+        or use custom dimensions (clamped to Telegram 512x512 ceiling and even numbers).
         """
+        if custom_w is not None and custom_h is not None and custom_w > 0 and custom_h > 0:
+            cw = max(32, min(TELEGRAM_MAX_SIDE, (int(custom_w) // 2) * 2))
+            ch = max(32, min(TELEGRAM_MAX_SIDE, (int(custom_h) // 2) * 2))
+            return cw, ch
+
         cw = crop.width if (crop and crop.is_valid) else orig_w
         ch = crop.height if (crop and crop.is_valid) else orig_h
         cw = max(2, cw)
@@ -101,19 +117,31 @@ class StickerConverter:
             ch = (ch // 2) * 2
             filters.append(f"crop={cw}:{ch}:{cx}:{cy}")
 
-        # 2. FPS limit
-        target_fps = min(item_settings.fps or self.config.fps, TELEGRAM_MAX_FPS)
-        if info.fps > target_fps or info.is_static_image:
-            filters.append(f"fps={target_fps}")
+        # 2. Speed adjustment (setpts) with PTS-STARTPTS for clean zero-start timestamps
+        spd = getattr(item_settings, "speed", 1.0)
+        if abs(spd - 1.0) > 0.001 and spd > 0.0:
+            filters.append(f"setpts=(PTS-STARTPTS)/{spd:.4f}")
+        else:
+            filters.append("setpts=PTS-STARTPTS")
 
-        # 3. Lanczos downscaling to exact Telegram sticker dimensions
+        # 3. FPS limit (applied after timestamp re-timing so frames are sampled at target rate)
+        req_fps = getattr(item_settings, "fps", 0)
+        if req_fps and req_fps > 0:
+            target_fps = min(req_fps, TELEGRAM_MAX_FPS)
+            filters.append(f"fps={target_fps}:round=near")
+        else:
+            target_fps = min(int(round(info.fps)) if info.fps > 0 else 30, TELEGRAM_MAX_FPS)
+            if info.fps > TELEGRAM_MAX_FPS or info.is_static_image:
+                filters.append(f"fps={target_fps}:round=near")
+
+        # 4. Lanczos scaling to target dimensions
         filters.append(f"scale={target_w}:{target_h}:flags=lanczos")
 
-        # 4. Sharpening filter to restore micro-contrast and crisp edges for stickers
+        # 5. Sharpening filter to restore micro-contrast and crisp edges for stickers
         if item_settings.enable_unsharp and self.config.enable_unsharp:
             filters.append("unsharp=lx=3:ly=3:la=0.35:cx=3:cy=3:ca=0.0")
 
-        # 5. Set SAR
+        # 6. Set SAR
         filters.append("setsar=1")
 
         return ",".join(filters)
@@ -124,7 +152,8 @@ class StickerConverter:
         dest_temp: str,
         vf: str,
         start_time: float,
-        duration: float,
+        source_duration: float,
+        output_duration: float,
         pix_fmt: str,
         crf: Optional[int] = None,
         bitrate_bps: Optional[int] = None,
@@ -142,13 +171,15 @@ class StickerConverter:
         if is_static:
             fps = min(self.config.fps, TELEGRAM_MAX_FPS)
             cmd += ["-loop", "1", "-framerate", str(fps)]
+            cmd += ["-i", src]
+        else:
+            if start_time > 0:
+                cmd += ["-ss", f"{start_time:.3f}"]
+            if source_duration > 0:
+                cmd += ["-t", f"{source_duration:.3f}"]
+            cmd += ["-i", src]
 
-        # Time seek
-        if start_time > 0 and not is_static:
-            cmd += ["-ss", f"{start_time:.3f}"]
-
-        cmd += ["-i", src]
-        cmd += ["-t", f"{duration:.3f}", "-vf", vf, "-c:v", "libvpx-vp9"]
+        cmd += ["-vf", vf, "-t", f"{output_duration:.3f}", "-c:v", "libvpx-vp9"]
 
         if crf is not None:
             cmd += ["-crf", str(crf), "-b:v", "0"]
@@ -208,23 +239,31 @@ class StickerConverter:
         if item_settings is None:
             item_settings = ItemSettings()
 
-        # Calculate duration
+        # Calculate duration and speed factor
         start_time = max(0.0, item_settings.trim_start)
+        spd = getattr(item_settings, "speed", 1.0)
+        if spd <= 0.0:
+            spd = 1.0
+
         if info.is_static_image:
-            duration = 1.0  # 1s static loop is lightweight and compliant
+            source_duration = 1.0
+            output_duration = 1.0
         else:
             if item_settings.trim_end > start_time:
-                duration = item_settings.trim_end - start_time
+                source_duration = item_settings.trim_end - start_time
             elif info.duration > 0:
-                duration = info.duration - start_time
+                source_duration = info.duration - start_time
             else:
-                duration = TELEGRAM_MAX_DURATION
+                source_duration = TELEGRAM_MAX_DURATION * spd
 
-            # Clamp to max Telegram duration (3.0s)
-            duration = min(duration, TELEGRAM_MAX_DURATION)
-            duration = max(0.1, duration)
+            output_duration = source_duration / spd
+            output_duration = max(0.05, output_duration)
 
-        target_w, target_h = self.calculate_target_dims(info.width, info.height, item_settings.crop)
+        duration = output_duration
+        target_w, target_h = self.calculate_target_dims(
+            info.width, info.height, item_settings.crop,
+            item_settings.custom_width, item_settings.custom_height
+        )
         vf = self.build_video_filter(info, item_settings, target_w, target_h)
         pix_fmt = "yuva420p" if info.has_alpha else "yuv420p"
 
@@ -250,11 +289,12 @@ class StickerConverter:
             dest_temp=temp_output,
             vf=vf,
             start_time=start_time,
-            duration=duration,
+            source_duration=source_duration,
+            output_duration=output_duration,
             pix_fmt=pix_fmt,
             crf=18,
             is_static=info.is_static_image,
-            cpu_used=2
+            cpu_used=3
         )
 
         if self.is_cancelled:
@@ -286,11 +326,12 @@ class StickerConverter:
                     dest_temp=temp_output,
                     vf=vf,
                     start_time=start_time,
-                    duration=duration,
+                    source_duration=source_duration,
+                    output_duration=output_duration,
                     pix_fmt=pix_fmt,
                     crf=mid,
                     is_static=info.is_static_image,
-                    cpu_used=2
+                    cpu_used=4
                 )
                 if not ok or not os.path.exists(temp_output):
                     low = mid + 1
@@ -314,14 +355,15 @@ class StickerConverter:
                     dest_temp=temp_output,
                     vf=vf,
                     start_time=start_time,
-                    duration=duration,
+                    source_duration=source_duration,
+                    output_duration=output_duration,
                     pix_fmt=pix_fmt,
                     crf=best_crf,
                     is_static=info.is_static_image,
                     cpu_used=1
                 )
         else:
-            # Fallback: Constrained 2-pass bitrate allocation to ensure it fits under 256KB
+            # Fallback: Constrained 2-pass bitrate allocation to ensure it fits under target limit
             if progress_cb:
                 progress_cb(50.0, "Two-pass bitrate budget pass 1...")
             # Calculate target bitrate to fill ~90% of safety ceiling
@@ -334,7 +376,8 @@ class StickerConverter:
                 dest_temp=temp_output,
                 vf=vf,
                 start_time=start_time,
-                duration=duration,
+                source_duration=source_duration,
+                output_duration=output_duration,
                 pix_fmt=pix_fmt,
                 bitrate_bps=target_bps,
                 two_pass=1,
@@ -349,7 +392,8 @@ class StickerConverter:
                 dest_temp=temp_output,
                 vf=vf,
                 start_time=start_time,
-                duration=duration,
+                source_duration=source_duration,
+                output_duration=output_duration,
                 pix_fmt=pix_fmt,
                 bitrate_bps=target_bps,
                 two_pass=2,
