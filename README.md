@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 ![NotAconverter Hero Banner](docs/images/hero_banner.png)
 
@@ -15,11 +15,11 @@
 <br/>
 
 <a href="https://github.com/notsons-git/notaconverter/releases/latest">
-  <img src="https://img.shields.io/badge/⬇️%20Скачать%20NotAconverter%201.2.0%20(EXE)-A6FF00?style=for-the-badge&labelColor=161A13&color=A6FF00" alt="Download EXE">
+  <img src="https://img.shields.io/badge/Download-Installer%20v1.2.0%20(21.5%20MB)-A6FF00?style=for-the-badge&logo=windows&logoColor=0F120E&labelColor=161A13" alt="Download Installer (21.5 MB)">
 </a>
 &nbsp;
-<a href="https://github.com/notsons-git/notaconverter/releases">
-  <img src="https://img.shields.io/badge/📦%20Все%20релизы-161A13?style=for-the-badge&labelColor=0F120E&color=273321" alt="All Releases">
+<a href="https://github.com/notsons-git/notaconverter/releases/latest">
+  <img src="https://img.shields.io/badge/Download-Portable%20EXE%20(30.2%20MB)-273321?style=for-the-badge&logoColor=white&labelColor=161A13" alt="Download Portable EXE (30.2 MB)">
 </a>
 
 </div>
@@ -106,9 +106,9 @@
 | **Формат** | `WebM` | `.webm` с потоковыми метаданными |
 | **Кодек** | `VP9` (`libvpx-vp9`) | Профиль 0 / Профиль 1 (с прозрачностью `yuva420p`) |
 | **Аудио** | Запрещено | Флаг `-an` (полное удаление звука) |
-| **Разрешение** | Одна сторона ровно 512 px, вторая $\le 512\text{ px}$ | Автоматическое масштабирование с чётными сторонами |
-| **Вес файла** | $\le 256\text{ КБ}$ | Автоматический двухпроходный расчет битрейта |
-| **Длительность** | $\le 3.00\text{ с}$ | Нарезка с точностью до сотых секунды, кнопка `FIT 3.0s` |
+| **Разрешение** | Одна сторона ровно 512 px, вторая ≤ 512 px | Автоматическое масштабирование с чётными сторонами |
+| **Вес файла** | ≤ 256 КБ | Автоматический двухпроходный расчет битрейта |
+| **Длительность** | ≤ 3.00 с | Нарезка с точностью до сотых секунды, кнопка `FIT 3.0s` |
 | **FPS** | До 30 кадров/с | Настраиваемый дециматор частоты кадров |
 
 ---
@@ -117,12 +117,16 @@
 
 ## Установка и запуск
 
-### Готовый файл для Windows (EXE)
+### 1. Установщик для Windows (Рекомендуется)
 1. Откройте [**GitHub Releases**](https://github.com/notsons-git/notaconverter/releases/latest).
-2. Скачайте **`NotAconverter-1.2.0.exe`**.
-3. Запустите файл (программа автономна, установка не требуется; нужен доступный системный или локальный `ffmpeg`).
+2. Скачайте **`NotAconverter-Setup-1.2.0.exe`** (всего 21.5 МБ).
+3. Запустите инсталлятор — программа быстро установится в профиль пользователя (права администратора не требуются), создаст ярлык на рабочем столе и меню «Пуск».
 
-### Запуск из исходного кода (Python 3.11+)
+### 2. Портативная версия (Standalone EXE)
+1. Скачайте **`NotAconverter-1.2.0.exe`** (30.2 МБ).
+2. Запустите файл напрямую без установки.
+
+### 3. Запуск из исходного кода (Python 3.11+)
 ```bash
 git clone https://github.com/notsons-git/notaconverter.git
 cd notaconverter
@@ -131,10 +135,15 @@ python main.py
 ```
 
 ### Сборка исполняемого файла
-```bash
-python build_optimized_exe.py
-```
-Готовый бинарник будет создан в каталоге `dist/NotAconverter-1.2.0.exe`.
+- **Сборка одного EXE:**
+  ```bash
+  python build_optimized_exe.py
+  ```
+- **Сборка инсталлятора (Inno Setup):**
+  ```bash
+  pyinstaller notaconverter_dir.spec --clean -y
+  ISCC.exe installer.iss
+  ```
 
 ---
 
