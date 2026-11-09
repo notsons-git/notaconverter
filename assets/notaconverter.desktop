@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=NotAconverter
+GenericName=Telegram Video Sticker Converter
+Comment=Convert videos, GIFs and animations to Telegram WebM (VP9) stickers
+Exec=NotAconverter
+Icon=logo
+Terminal=false
+Categories=Graphics;Video;AudioVideo;
+Keywords=telegram;sticker;webm;converter;vp9;video;

@@ -63,16 +63,50 @@ def get_soft_chime_wav(volume: float = 0.8) -> bytes:
 
 
 def play_completion_sound(volume: float = 0.8):
-    """Plays gentle non-intrusive chime asynchronously on Windows with the given volume."""
+    """Plays gentle non-intrusive chime asynchronously on Windows/Mac/Linux with the given volume."""
     if volume <= 0.001:
         return
-    if sys.platform == "win32":
-        try:
+    try:
+        wav_bytes = get_soft_chime_wav(volume=volume)
+        if sys.platform == "win32":
             import winsound
-            wav_bytes = get_soft_chime_wav(volume=volume)
             threading.Thread(
                 target=lambda: winsound.PlaySound(wav_bytes, winsound.SND_MEMORY),
                 daemon=True
             ).start()
-        except Exception:
-            pass
+        elif sys.platform == "darwin":
+            # macOS: play via native afplay
+            import tempfile, subprocess
+            def _play_mac():
+                try:
+                    with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                        f.write(wav_bytes)
+                        tmp_name = f.name
+                    subprocess.run(["afplay", tmp_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    try:
+                        os.remove(tmp_name)
+                    except OSError:
+                        pass
+                except Exception:
+                    pass
+            threading.Thread(target=_play_mac, daemon=True).start()
+        else:
+            # Linux: try paplay or aplay if available
+            import tempfile, subprocess, shutil
+            player = shutil.which("paplay") or shutil.which("aplay")
+            if player:
+                def _play_linux():
+                    try:
+                        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                            f.write(wav_bytes)
+                            tmp_name = f.name
+                        subprocess.run([player, tmp_name], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                        try:
+                            os.remove(tmp_name)
+                        except OSError:
+                            pass
+                    except Exception:
+                        pass
+                threading.Thread(target=_play_linux, daemon=True).start()
+    except Exception:
+        pass

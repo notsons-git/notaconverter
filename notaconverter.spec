@@ -1,4 +1,5 @@
 # -*- mode: python ; coding: utf-8 -*-
+import sys
 from pathlib import Path
 
 block_cipher = None
@@ -53,6 +54,16 @@ a.datas = [x for x in a.datas if not ('translations' in x[0].lower() and x[0].lo
 
 pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
 
+# Select platform-specific icon
+if sys.platform == 'darwin':
+    app_icon = 'assets/app.icns' if Path('assets/app.icns').exists() else None
+elif sys.platform == 'win32':
+    app_icon = 'assets/app.ico' if Path('assets/app.ico').exists() else None
+else:
+    app_icon = 'assets/logo.png' if Path('assets/logo.png').exists() else None
+
+exe_name = 'NotAconverter-1.2.0' if sys.platform == 'win32' else 'NotAconverter'
+
 exe = EXE(
     pyz,
     a.scripts,
@@ -60,7 +71,7 @@ exe = EXE(
     a.zipfiles,
     a.datas,
     [],
-    name='NotAconverter-1.2.0',
+    name=exe_name,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -73,5 +84,21 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='assets/app.ico'
+    icon=app_icon
 )
+
+if sys.platform == 'darwin':
+    app = BUNDLE(
+        exe,
+        name='NotAconverter.app',
+        icon=app_icon,
+        bundle_identifier='com.notsons.notaconverter',
+        info_plist={
+            'CFBundleName': 'NotAconverter',
+            'CFBundleDisplayName': 'NotAconverter',
+            'CFBundleShortVersionString': '1.2.0',
+            'CFBundleVersion': '1.2.0',
+            'NSHighResolutionCapable': 'True',
+            'LSMinimumSystemVersion': '11.0',
+        }
+    )

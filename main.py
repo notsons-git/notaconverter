@@ -10,6 +10,11 @@ if os.name == "nt":
             ctypes.windll.user32.ShowWindow(hwnd, 0)
     except Exception:
         pass
+elif sys.platform == "darwin":
+    # Ensure standard Homebrew & MacPorts bin paths exist in PATH for ffmpeg discovery
+    for extra_path in ["/opt/homebrew/bin", "/usr/local/bin"]:
+        if extra_path not in os.environ.get("PATH", "") and os.path.isdir(extra_path):
+            os.environ["PATH"] = f"{extra_path}:{os.environ.get('PATH', '')}"
 
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt

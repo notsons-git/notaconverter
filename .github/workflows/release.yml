@@ -1,0 +1,154 @@
+name: Build & Release Multi-Platform
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows:
+    name: Build Windows x64
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Standalone EXE
+        run: |
+          pyinstaller notaconverter.spec --clean -y
+
+      - name: Build Inno Setup Installer
+        run: |
+          choco install innosetup --no-progress
+          pyinstaller notaconverter_dir.spec --clean -y
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer.iss
+
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotAconverter-Windows
+          path: |
+            dist/NotAconverter-1.2.0.exe
+            dist/NotAconverter-Setup-1.2.0.exe
+
+  build-linux:
+    name: Build Linux x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgl1-mesa-glx libegl1 libxkbcommon-x11-0 libxcb-cursor0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-sync1 libxcb-xinerama0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build Linux Binary
+        run: |
+          pyinstaller notaconverter.spec --clean -y
+
+      - name: Package Linux Archive
+        run: |
+          mkdir -p package/NotAconverter
+          cp dist/NotAconverter package/NotAconverter/
+          cp assets/logo.png package/NotAconverter/
+          cp assets/notaconverter.desktop package/NotAconverter/
+          cp README.md LICENSE package/NotAconverter/
+          chmod +x package/NotAconverter/NotAconverter
+          tar -czvf dist/NotAconverter-1.2.0-Linux-x86_64.tar.gz -C package NotAconverter
+
+      - name: Upload Linux Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotAconverter-Linux
+          path: dist/NotAconverter-1.2.0-Linux-x86_64.tar.gz
+
+  build-macos:
+    name: Build macOS Apple Silicon
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build macOS App Bundle
+        run: |
+          pyinstaller notaconverter.spec --clean -y
+
+      - name: Package macOS DMG & ZIP
+        run: |
+          hdiutil create -volname "NotAconverter" -srcfolder dist/NotAconverter.app -ov -format UDZO dist/NotAconverter-1.2.0-macOS-arm64.dmg
+          cd dist
+          zip -r -y NotAconverter-1.2.0-macOS-arm64.zip NotAconverter.app
+          cd ..
+
+      - name: Upload macOS Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: NotAconverter-macOS
+          path: |
+            dist/NotAconverter-1.2.0-macOS-arm64.dmg
+            dist/NotAconverter-1.2.0-macOS-arm64.zip
+
+  publish-release:
+    name: Publish GitHub Release
+    needs: [build-windows, build-linux, build-macos]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_assets
+          merge-multiple: true
+
+      - name: Display downloaded files
+        run: ls -la release_assets
+
+      - name: Publish Release Assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release_assets/NotAconverter-1.2.0.exe
+            release_assets/NotAconverter-Setup-1.2.0.exe
+            release_assets/NotAconverter-1.2.0-Linux-x86_64.tar.gz
+            release_assets/NotAconverter-1.2.0-macOS-arm64.dmg
+            release_assets/NotAconverter-1.2.0-macOS-arm64.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

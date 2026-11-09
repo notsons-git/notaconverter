@@ -8,18 +8,23 @@
 *Любое видео, GIF или фото → готовый WebM (VP9) по спецификации @Stickers.*
 
 [![Version](https://img.shields.io/badge/version-1.2.0-A6FF00?style=for-the-badge&logoColor=0F120E)](https://github.com/notsons-git/notaconverter/releases)
-[![Platform](https://img.shields.io/badge/platform-Windows%20x64-161A13?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/notsons-git/notaconverter/releases)
+[![Build](https://img.shields.io/github/actions/workflow/status/notsons-git/notaconverter/release.yml?branch=main&style=for-the-badge&label=CI%2FCD&labelColor=161A13&color=A6FF00)](https://github.com/notsons-git/notaconverter/actions)
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-161A13?style=for-the-badge&logoColor=white)](https://github.com/notsons-git/notaconverter/releases)
 [![FFmpeg](https://img.shields.io/badge/engine-FFmpeg%20VP9-273321?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org)
 [![License](https://img.shields.io/badge/license-MIT-161A13?style=for-the-badge)](LICENSE)
 
 <br/>
 
 <a href="https://github.com/notsons-git/notaconverter/releases/latest">
-  <img src="https://img.shields.io/badge/Download-Installer%20v1.2.0%20(21.5%20MB)-A6FF00?style=for-the-badge&logo=windows&logoColor=0F120E&labelColor=161A13" alt="Download Installer (21.5 MB)">
+  <img src="https://img.shields.io/badge/Windows-Installer%20(21.5%20MB)-A6FF00?style=for-the-badge&logo=windows&logoColor=0F120E&labelColor=161A13" alt="Windows Setup">
 </a>
 &nbsp;
 <a href="https://github.com/notsons-git/notaconverter/releases/latest">
-  <img src="https://img.shields.io/badge/Download-Portable%20EXE%20(30.2%20MB)-273321?style=for-the-badge&logoColor=white&labelColor=161A13" alt="Download Portable EXE (30.2 MB)">
+  <img src="https://img.shields.io/badge/macOS-DMG%20Disk%20Image-A6FF00?style=for-the-badge&logo=apple&logoColor=0F120E&labelColor=161A13" alt="macOS DMG">
+</a>
+&nbsp;
+<a href="https://github.com/notsons-git/notaconverter/releases/latest">
+  <img src="https://img.shields.io/badge/Linux-Portable%20Tarball-A6FF00?style=for-the-badge&logo=linux&logoColor=0F120E&labelColor=161A13" alt="Linux Tarball">
 </a>
 
 </div>
@@ -87,6 +92,7 @@
 
 ## Возможности
 
+- **Кроссплатформенность:** Работает на Windows, macOS и Linux.
 - **Импорт любого медиа:** Видео (`.mp4`, `.mov`, `.mkv`, `.webm`), анимации (`.gif`), графика (`.png`, `.jpg`, `.jpeg`, `.webp`). Drag & Drop файлов и папок.
 - **Интерактивное кадрирование:** Пресеты пропорций (`1:1 Square`, `Free Crop`, `4:3`, `16:9`), сетка третей, автоокругление до чётных пикселей.
 - **Монтаж на таймлайне:** Точные границы обрезки, кнопка `FIT 3.0s`, управление воспроизведением по клавише Space.
@@ -117,33 +123,34 @@
 
 ## Установка и запуск
 
-### 1. Установщик для Windows (Рекомендуется)
-1. Откройте [**GitHub Releases**](https://github.com/notsons-git/notaconverter/releases/latest).
-2. Скачайте **`NotAconverter-Setup-1.2.0.exe`** (всего 21.5 МБ).
-3. Запустите инсталлятор — программа быстро установится в профиль пользователя (права администратора не требуются), создаст ярлык на рабочем столе и меню «Пуск».
+Все готовые сборки собираются автоматически через **GitHub Actions CI/CD** для всех платформ:
 
-### 2. Портативная версия (Standalone EXE)
-1. Скачайте **`NotAconverter-1.2.0.exe`** (30.2 МБ).
-2. Запустите файл напрямую без установки.
+### 1. Windows
+- **Установщик (Setup, 21.5 МБ) — рекомендуется:** скачайте `NotAconverter-Setup-1.2.0.exe` из [Releases](https://github.com/notsons-git/notaconverter/releases/latest). Установка без прав админа, ярлыки на рабочем столе и в меню «Пуск».
+- **Портативная версия (30.2 МБ):** скачайте `NotAconverter-1.2.0.exe` и запустите без установки.
 
-### 3. Запуск из исходного кода (Python 3.11+)
+### 2. macOS (Apple Silicon / Intel)
+- Скачайте образ **`.dmg`** (`NotAconverter-1.2.0-macOS-arm64.dmg`) или архив **`.zip`**.
+- Откройте образ и перетащите `NotAconverter.app` в папку `Applications`.
+- *(Требуется установленный `ffmpeg`: `brew install ffmpeg`).*
+
+### 3. Linux (Ubuntu, Debian, Fedora, Arch)
+- Скачайте архив **`NotAconverter-1.2.0-Linux-x86_64.tar.gz`**.
+- Распакуйте и запустите:
+  ```bash
+  tar -xzf NotAconverter-1.2.0-Linux-x86_64.tar.gz
+  cd NotAconverter
+  ./NotAconverter
+  ```
+- *(Требуется системный `ffmpeg`: `sudo apt install ffmpeg` / `sudo dnf install ffmpeg`).*
+
+### 4. Запуск из исходного кода (Python 3.11+)
 ```bash
 git clone https://github.com/notsons-git/notaconverter.git
 cd notaconverter
 pip install -r requirements.txt
 python main.py
 ```
-
-### Сборка исполняемого файла
-- **Сборка одного EXE:**
-  ```bash
-  python build_optimized_exe.py
-  ```
-- **Сборка инсталлятора (Inno Setup):**
-  ```bash
-  pyinstaller notaconverter_dir.spec --clean -y
-  ISCC.exe installer.iss
-  ```
 
 ---
 
