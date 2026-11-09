@@ -16,7 +16,7 @@
 <br/>
 
 <a href="https://github.com/notsons-git/notaconverter/releases/latest">
-  <img src="https://img.shields.io/badge/Windows-Installer%20(21.5%20MB)-A6FF00?style=for-the-badge&logo=windows&logoColor=0F120E&labelColor=161A13" alt="Windows Setup">
+  <img src="https://img.shields.io/badge/Windows-Installer%20(18.2%20MB)-A6FF00?style=for-the-badge&logo=windows&logoColor=0F120E&labelColor=161A13" alt="Windows Setup">
 </a>
 &nbsp;
 <a href="https://github.com/notsons-git/notaconverter/releases/latest">
@@ -24,7 +24,7 @@
 </a>
 &nbsp;
 <a href="https://github.com/notsons-git/notaconverter/releases/latest">
-  <img src="https://img.shields.io/badge/Linux-Portable%20Tarball-A6FF00?style=for-the-badge&logo=linux&logoColor=0F120E&labelColor=161A13" alt="Linux Tarball">
+  <img src="https://img.shields.io/badge/Linux-AppImage%20%2F%20DEB-A6FF00?style=for-the-badge&logo=linux&logoColor=0F120E&labelColor=161A13" alt="Linux AppImage / DEB">
 </a>
 
 </div>
@@ -126,23 +126,18 @@
 Все готовые сборки собираются автоматически через **GitHub Actions CI/CD** для всех платформ:
 
 ### 1. Windows
-- **Установщик (Setup, 21.5 МБ) — рекомендуется:** скачайте `NotAconverter-Setup-1.2.0.exe` из [Releases](https://github.com/notsons-git/notaconverter/releases/latest). Установка без прав админа, ярлыки на рабочем столе и в меню «Пуск».
-- **Портативная версия (30.2 МБ):** скачайте `NotAconverter-1.2.0.exe` и запустите без установки.
+- **Установщик (Setup, 18.2 МБ) — рекомендуется:** скачайте `NotAconverter-Setup-1.2.0.exe` из [Releases](https://github.com/notsons-git/notaconverter/releases/latest). Установка без прав админа, ярлыки на рабочем столе и в меню «Пуск».
+- **Портативная версия (30.0 МБ):** скачайте `NotAconverter-1.2.0.exe` и запустите без установки.
 
-### 2. macOS (Apple Silicon / Intel)
+### 2. Linux (Ubuntu, Debian, Fedora, Arch, Mint)
+- **AppImage (1-клик запуск, без распаковки):** скачайте **`NotAconverter-1.2.0-x86_64.AppImage`**, разрешите исполнение (`chmod +x`) и запустите двойным кликом.
+- **Пакет DEB (Ubuntu / Debian / Mint):** скачайте **`notaconverter_1.2.0_amd64.deb`** и установите в систему (`sudo dpkg -i notaconverter_1.2.0_amd64.deb`).
+- **Переносимый архив:** `NotAconverter-1.2.0-Linux-x86_64.tar.gz`.
+
+### 3. macOS (Apple Silicon / Intel)
 - Скачайте образ **`.dmg`** (`NotAconverter-1.2.0-macOS-arm64.dmg`) или архив **`.zip`**.
 - Откройте образ и перетащите `NotAconverter.app` в папку `Applications`.
 - *(Требуется установленный `ffmpeg`: `brew install ffmpeg`).*
-
-### 3. Linux (Ubuntu, Debian, Fedora, Arch)
-- Скачайте архив **`NotAconverter-1.2.0-Linux-x86_64.tar.gz`**.
-- Распакуйте и запустите:
-  ```bash
-  tar -xzf NotAconverter-1.2.0-Linux-x86_64.tar.gz
-  cd NotAconverter
-  ./NotAconverter
-  ```
-- *(Требуется системный `ffmpeg`: `sudo apt install ffmpeg` / `sudo dnf install ffmpeg`).*
 
 ### 4. Запуск из исходного кода (Python 3.11+)
 ```bash

@@ -61,7 +61,7 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y libgl1 libegl1 libxkbcommon-x11-0 libxcb-cursor0
+          sudo apt-get install -y libgl1 libegl1 libxkbcommon-x11-0 libxcb-cursor0 libfuse2 wget file
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -78,7 +78,49 @@ jobs:
         run: |
           pyinstaller notaconverter.spec --clean -y
 
-      - name: Package Linux Archive
+      - name: Package Linux AppImage (1-Click Run)
+        run: |
+          mkdir -p AppDir/usr/bin
+          cp dist/NotAconverter AppDir/usr/bin/NotAconverter
+          cp assets/logo.png AppDir/logo.png
+          cp assets/logo.png AppDir/.DirIcon
+          cp assets/notaconverter.desktop AppDir/notaconverter.desktop
+          cat << 'EOF' > AppDir/AppRun
+          #!/bin/sh
+          HERE="$(dirname "$(readlink -f "${0}")")"
+          exec "${HERE}/usr/bin/NotAconverter" "$@"
+          EOF
+          chmod +x AppDir/AppRun AppDir/usr/bin/NotAconverter
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+          chmod +x appimagetool
+          export ARCH=x86_64
+          ./appimagetool --appimage-extract-and-run AppDir dist/NotAconverter-1.2.0-x86_64.AppImage
+
+      - name: Package Linux DEB (Ubuntu / Debian / Mint)
+        run: |
+          mkdir -p deb_pkg/DEBIAN
+          mkdir -p deb_pkg/usr/bin
+          mkdir -p deb_pkg/usr/share/applications
+          mkdir -p deb_pkg/usr/share/icons/hicolor/512x512/apps
+          cat << 'EOF' > deb_pkg/DEBIAN/control
+          Package: notaconverter
+          Version: 1.2.0
+          Section: graphics
+          Priority: optional
+          Architecture: amd64
+          Maintainer: NotSons <https://github.com/notsons-git/notaconverter>
+          Description: Telegram Video Sticker Converter (WebM VP9)
+           Engineering suite for creating Telegram video stickers with alpha transparency.
+          EOF
+          cp dist/NotAconverter deb_pkg/usr/bin/notaconverter
+          chmod 755 deb_pkg/usr/bin/notaconverter
+          cp assets/notaconverter.desktop deb_pkg/usr/share/applications/notaconverter.desktop
+          cp assets/logo.png deb_pkg/usr/share/icons/hicolor/512x512/apps/notaconverter.png
+          sed -i 's/Icon=logo/Icon=notaconverter/g' deb_pkg/usr/share/applications/notaconverter.desktop
+          sed -i 's/Exec=NotAconverter/Exec=notaconverter/g' deb_pkg/usr/share/applications/notaconverter.desktop
+          dpkg-deb --build --root-owner-group deb_pkg dist/notaconverter_1.2.0_amd64.deb
+
+      - name: Package Linux Tarball (Portable)
         run: |
           mkdir -p package/NotAconverter
           cp dist/NotAconverter package/NotAconverter/
@@ -88,11 +130,14 @@ jobs:
           chmod +x package/NotAconverter/NotAconverter
           tar -czvf dist/NotAconverter-1.2.0-Linux-x86_64.tar.gz -C package NotAconverter
 
-      - name: Upload Linux Artifact
+      - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: NotAconverter-Linux
-          path: dist/NotAconverter-1.2.0-Linux-x86_64.tar.gz
+          path: |
+            dist/NotAconverter-1.2.0-x86_64.AppImage
+            dist/notaconverter_1.2.0_amd64.deb
+            dist/NotAconverter-1.2.0-Linux-x86_64.tar.gz
 
   build-macos:
     name: Build macOS Apple Silicon
@@ -153,6 +198,8 @@ jobs:
           files: |
             release_assets/NotAconverter-1.2.0.exe
             release_assets/NotAconverter-Setup-1.2.0.exe
+            release_assets/NotAconverter-1.2.0-x86_64.AppImage
+            release_assets/notaconverter_1.2.0_amd64.deb
             release_assets/NotAconverter-1.2.0-Linux-x86_64.tar.gz
             release_assets/NotAconverter-1.2.0-macOS-arm64.dmg
             release_assets/NotAconverter-1.2.0-macOS-arm64.zip
